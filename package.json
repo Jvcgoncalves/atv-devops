@@ -14,9 +14,12 @@
   },
   "packageManager": "npm@10.9.3",
   "scripts": {
+    "start": "npm run start:api",
     "dev": "npm run dev:web",
     "dev:web": "npm --workspace @hvac/web run dev",
     "dev:api": "npm --workspace @hvac/api run dev",
+    "start:api": "npm --workspace @hvac/api run start",
+    "cutover:verify-data": "node apps/api/scripts/verify-cutover-data.mjs",
     "build": "npm run build:shared && npm run build:front && npm run build:api",
     "build:shared": "npm run build:contracts && npm run build:domain && npm run build:config",
     "build:contracts": "npm --workspace @hvac/contracts run build",

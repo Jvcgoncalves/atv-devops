@@ -15,6 +15,13 @@ export interface TelemetryUpdatedEventData {
   humidity: number;
   co2: number;
   source: TelemetrySource;
+  timestamp: string;
+  status: SystemState["salas"][number]["status"];
+}
+
+export interface AlertUpdatedEventData {
+  alert: Alert;
+  action: "updated" | "removed";
 }
 
 export interface SystemSnapshotEventData {
@@ -24,7 +31,7 @@ export interface SystemSnapshotEventData {
 export interface RealtimeEventMap {
   "telemetry.updated": EventEnvelope<TelemetryUpdatedEventData>;
   "alert.created": EventEnvelope<{ alert: Alert }>;
-  "alert.updated": EventEnvelope<{ alert: Alert }>;
+  "alert.updated": EventEnvelope<AlertUpdatedEventData>;
   "device.status.changed": EventEnvelope<{ deviceId: string; online: boolean }>;
   "system.snapshot": EventEnvelope<SystemSnapshotEventData>;
 }

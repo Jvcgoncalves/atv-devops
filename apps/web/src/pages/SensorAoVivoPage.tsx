@@ -1,6 +1,6 @@
 import { useSystem } from "../context/ConfigContext.tsx";
 import { STATUS, statusColor, statusLabel } from "../theme.ts";
-import type { MqttLiveData } from "../types/ui.ts";
+import type { LiveTelemetryData } from "../types/ui.ts";
 import type { Status } from "@hvac/contracts";
 
 // Faixas de referencia (padrao hospitalar) para colorir as leituras ao vivo.
@@ -44,7 +44,7 @@ export default function SensorAoVivoPage() {
   const salas = state?.salas || [];
   const salaNome = salas.find((s) => s.id === liveConfig.salaAlvo)?.nome || liveConfig.salaAlvo;
 
-  const d: MqttLiveData = liveStatus.lastData || {};
+  const d: LiveTelemetryData = liveStatus.lastData || {};
 
   return (
     <>
@@ -52,9 +52,9 @@ export default function SensorAoVivoPage() {
       <div className="card" style={{ marginBottom: 18 }}>
         <div className="row-between" style={{ flexWrap: "wrap", gap: 8 }}>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 16 }}>Sensor ao vivo — ESP32 (MQTT direto)</div>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>Sensor ao vivo — ESP32 (via API)</div>
             <div className="muted" style={{ fontSize: 13 }}>
-              O navegador assina o broker por WebSocket e injeta as leituras do ESP na sala escolhida.
+              Nest recebe MQTT, persiste a leitura e envia atualizações ao navegador por WebSocket.
             </div>
           </div>
           <span className={`conn-dot ${liveStatus.connected ? "" : "offline"}`}>
@@ -64,10 +64,10 @@ export default function SensorAoVivoPage() {
 
         <div className="form-row" style={{ gridTemplateColumns: "1fr 1fr", marginTop: 6 }}>
           <div className="field">
-            <label>Ativar recepção ao vivo</label>
+            <label>Mostrar telemetria ao vivo</label>
             <select value={liveConfig.enabled ? "1" : "0"} onChange={(e) => setLiveConfig({ enabled: e.target.value === "1" })}>
-              <option value="0">Desligado (salas simuladas)</option>
-              <option value="1">Ligado (ESP32 alimenta uma sala)</option>
+              <option value="0">Ocultar</option>
+              <option value="1">Exibir</option>
             </select>
           </div>
           <div className="field">
@@ -80,19 +80,19 @@ export default function SensorAoVivoPage() {
           </div>
         </div>
 
-        <div className="form-row" style={{ gridTemplateColumns: "2fr 1.4fr" }}>
+        <div className="form-row" style={{ gridTemplateColumns: "1fr 1fr" }}>
           <div className="field">
-            <label>Broker (WebSocket)</label>
-            <input value={liveConfig.url} onChange={(e) => setLiveConfig({ url: e.target.value })} />
+            <label>Transporte ao vivo</label>
+            <input value={`Socket.IO ${liveStatus.url}`} readOnly />
           </div>
           <div className="field">
-            <label>Tópico (igual ao do sketch ESP32)</label>
-            <input value={liveConfig.topic} onChange={(e) => setLiveConfig({ topic: e.target.value })} />
+            <label>Evento recebido</label>
+            <input value={liveStatus.topic} readOnly />
           </div>
         </div>
 
         <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
-          Última mensagem: {liveStatus.lastTs ? new Date(liveStatus.lastTs).toLocaleTimeString("pt-BR") : "—"}
+          Última atualização: {liveStatus.lastTs ? new Date(liveStatus.lastTs).toLocaleTimeString("pt-BR") : "—"}
           {liveConfig.enabled && (
             <>
               {" · "}os valores abaixo aparecem em <strong>{salaNome}</strong> no Dashboard (com selo <em>AO VIVO</em>).
@@ -108,12 +108,12 @@ export default function SensorAoVivoPage() {
       </div>
 
       {!liveConfig.enabled ? (
-        <div className="empty">Recepção ao vivo desligada. Ative acima para o ESP32 alimentar uma sala.</div>
+        <div className="empty">Visualização ao vivo ocultada. Ative acima para acompanhar uma sala.</div>
       ) : !liveStatus.lastData ? (
         <div className="empty">
-          Aguardando a primeira mensagem no tópico <code>{liveConfig.topic}</code>…
+          Aguardando a primeira telemetria do backend…
           <br />
-          Verifique se o ESP está publicando nesse mesmo tópico.
+          Verifique se API Nest e MQTT estão conectados.
         </div>
       ) : (
         <>

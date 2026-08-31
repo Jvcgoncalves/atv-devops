@@ -27,6 +27,7 @@ export default function TelemetryChart({ salas, thresholds }: TelemetryChartProp
   const [metric, setMetric] = useState<Metric>("temperatura");
   const [roomFilter, setRoomFilter] = useState<string>("todas"); // "todas" | salaId
   const [data, setData] = useState<ChartPoint[]>([]);
+  const canMeasureContainer = typeof window !== "undefined" && typeof document !== "undefined";
 
   const visiveis = roomFilter === "todas" ? salas : salas.filter((s) => s.id === roomFilter);
 
@@ -113,35 +114,39 @@ export default function TelemetryChart({ salas, thresholds }: TelemetryChartProp
         ))}
       </div>
 
-      <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={data} margin={{ top: 6, right: 16, bottom: 0, left: -8 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#eef2f6" />
-          <XAxis dataKey="t" tick={{ fontSize: 11, fill: palette.text }} minTickGap={40} />
-          <YAxis tick={{ fontSize: 11, fill: palette.text }} domain={["auto", "auto"]} />
-          <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13 }} />
-          <Legend wrapperStyle={{ fontSize: 12 }} />
-          {refs.map((r, i) => (
-            <ReferenceLine
-              key={i}
-              y={r.y}
-              stroke={r.label === "critico" ? palette.critical : r.label === "atencao" ? palette.warning : "#94a3b8"}
-              strokeDasharray="5 4"
-              strokeWidth={1.4}
-            />
-          ))}
-          {visiveis.map((s, idx) => (
-            <Line
-              key={s.id}
-              type="monotone"
-              dataKey={s.nome}
-              stroke={ROOM_COLORS[salas.findIndex((x) => x.id === s.id) % ROOM_COLORS.length]}
-              strokeWidth={2}
-              dot={false}
-              isAnimationActive={false}
-            />
-          ))}
-        </LineChart>
-      </ResponsiveContainer>
+      {canMeasureContainer ? (
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={data} margin={{ top: 6, right: 16, bottom: 0, left: -8 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#eef2f6" />
+            <XAxis dataKey="t" tick={{ fontSize: 11, fill: palette.text }} minTickGap={40} />
+            <YAxis tick={{ fontSize: 11, fill: palette.text }} domain={["auto", "auto"]} />
+            <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13 }} />
+            <Legend wrapperStyle={{ fontSize: 12 }} />
+            {refs.map((r, i) => (
+              <ReferenceLine
+                key={i}
+                y={r.y}
+                stroke={r.label === "critico" ? palette.critical : r.label === "atencao" ? palette.warning : "#94a3b8"}
+                strokeDasharray="5 4"
+                strokeWidth={1.4}
+              />
+            ))}
+            {visiveis.map((s, idx) => (
+              <Line
+                key={s.id}
+                type="monotone"
+                dataKey={s.nome}
+                stroke={ROOM_COLORS[salas.findIndex((x) => x.id === s.id) % ROOM_COLORS.length]}
+                strokeWidth={2}
+                dot={false}
+                isAnimationActive={false}
+              />
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
+      ) : (
+        <div style={{ height: 300 }} aria-label="Gráfico indisponível fora do navegador" />
+      )}
     </div>
   );
 }

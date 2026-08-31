@@ -6,18 +6,27 @@ import type { CountRow } from "./types.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, "hvac.db");
+const SQLITE_WRITE_MODE = "rollback";
+const writesEnabled = process.env.SQLITE_WRITE_MODE === SQLITE_WRITE_MODE;
 
-export const db = new Database(DB_PATH);
-db.pragma("journal_mode = WAL");
+export const db = new Database(DB_PATH, {
+  fileMustExist: !writesEnabled,
+  readonly: !writesEnabled,
+});
+if (writesEnabled) db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
 
-// Cria as tabelas (idempotente) a partir do schema conforme a DER
-const schema = fs.readFileSync(path.join(__dirname, "schema.sql"), "utf-8");
-db.exec(schema);
+if (writesEnabled) {
+  // Rollback-only mode can recreate the old local database when explicitly requested.
+  const schema = fs.readFileSync(path.join(__dirname, "schema.sql"), "utf-8");
+  db.exec(schema);
 
-// Seed inicial (somente se o banco estiver vazio)
-const row = db.prepare("SELECT COUNT(*) AS c FROM CLIMATIZADOR").get() as CountRow | undefined;
-if (row?.c === 0) seed();
+  const row = db.prepare("SELECT COUNT(*) AS c FROM CLIMATIZADOR").get() as CountRow | undefined;
+  if (row?.c === 0) seed();
+} else {
+  // Keep legacy data available for inspection during the rollback window.
+  db.pragma("query_only = ON");
+}
 
 function seed(): void {
   const insClima = db.prepare("INSERT INTO CLIMATIZADOR (nome, status, capacidade) VALUES (?, ?, ?)");

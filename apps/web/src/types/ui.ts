@@ -11,6 +11,7 @@ import type {
   NtfyLogEntry,
   Room,
   RoomThresholds,
+  RealtimeEvent,
   SaveThresholdsRequest,
   SetClimatizerRequest,
   Status,
@@ -34,7 +35,7 @@ export type HistoryState = Record<string, Record<Metric, TelemetryHistoryPoint[]
 
 export interface NtfyLogEntryDraft extends NtfyLogEntry {}
 
-export interface MqttLiveData {
+export interface LiveTelemetryData {
   temperature?: number;
   humidity?: number;
   co2?: number;
@@ -45,25 +46,31 @@ export interface MqttLiveData {
   [key: string]: unknown;
 }
 
-export interface MqttLiveState {
+export interface LiveStatus {
   connected: boolean;
   connecting: boolean;
-  lastData: MqttLiveData | null;
+  lastData: LiveTelemetryData | null;
   lastTs: string | null;
   error: string | null;
   url: string;
   topic: string;
 }
 
-export interface MqttLiveClient {
-  subscribe(listener: (state: MqttLiveState) => void): () => void;
+export interface RealtimeConnectionState {
+  connected: boolean;
+  connecting: boolean;
+  error: string | null;
+  url: string;
+}
+
+export interface RealtimeClient {
+  subscribe(listener: (event: RealtimeEvent) => void): () => void;
+  subscribeConnection(listener: (state: RealtimeConnectionState) => void): () => void;
   disconnect(): void;
 }
 
 export interface LiveConfig {
   enabled: boolean;
-  url: string;
-  topic: string;
   salaAlvo: string;
 }
 
@@ -116,7 +123,7 @@ export interface ApiClient {
   setFonteExterna(salaId: string | null): Promise<{ externalRoom: string | null }>;
 }
 
-export interface LiveStatusState extends MqttLiveState {}
+export interface LiveStatusState extends LiveStatus {}
 
 export interface ConfigActions {
   saveThresholds(salaId: string, next: RoomThresholds): Promise<ThresholdsMap>;
@@ -138,8 +145,16 @@ export interface ConfigContextValue extends ConfigActions {
   mode: ApiMode;
   refresh(): Promise<void>;
   liveConfig: LiveConfig;
-  liveStatus: MqttLiveState;
+  liveStatus: LiveStatus;
   setLiveConfig(patch: Partial<LiveConfig>): void;
+}
+
+export interface RealtimeUiState {
+  state: SystemState | null;
+  alerts: Alert[];
+  liveData: LiveTelemetryData | null;
+  liveTs: string | null;
+  version: number;
 }
 
 export interface PageProps {

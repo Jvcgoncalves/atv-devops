@@ -25,13 +25,15 @@ export class MqttIngestionService {
 
   private async handle(message: MqttMessage): Promise<void> {
     try {
+      if (!message || typeof message.topic !== "string" || !Buffer.isBuffer(message.payload)) return;
       if (this.handleStatus(message)) return;
       if (await this.handleVav(message)) return;
       if (await this.handleBathroom(message)) return;
+      if (!this.isTelemetryTopic(message.topic)) return;
       const telemetry = mapMqttPayloadToTelemetry({
         topic: message.topic,
         payload: message.payload,
-        defaultRoomId: process.env.MQTT_DEFAULT_ROOM_ID ?? null,
+        defaultRoomId: process.env.MQTT_DEFAULT_ROOM_ID ?? "sala-1",
       });
       if (!telemetry) return;
       const sourceMessageId = message.messageId == null ? undefined : `${message.topic}:${message.messageId}`;
@@ -76,5 +78,16 @@ export class MqttIngestionService {
     } catch {
       return null;
     }
+  }
+
+  private isTelemetryTopic(topic: string): boolean {
+    if (/^hvac\/sala\/[^/]+\/telemetria$/.test(topic)) return true;
+    const legacyTopics = [process.env.MQTT_LEGACY_TOPIC, process.env.MQTT_TOPIC, "tcc-hvac-kaue/airquality"]
+      .filter(Boolean)
+      .join(",")
+      .split(",")
+      .map((item) => item.trim())
+      .filter((item) => item && !item.includes("#") && !item.includes("+"));
+    return legacyTopics.includes(topic);
   }
 }

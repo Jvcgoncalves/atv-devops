@@ -45,6 +45,7 @@ export type {
 } from "./interfaces/system.ts";
 
 export type {
+  AlertUpdatedEventData,
   EventEnvelope,
   RealtimeEvent,
   RealtimeEventMap,

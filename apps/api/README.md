@@ -20,7 +20,9 @@ Informe `SUPABASE_URL` e chave server-only (`SUPABASE_SECRET_KEY` ou
 `SUPABASE_SERVICE_ROLE_KEY`) em `apps/api/.env`. A API sobe em `http://localhost:3001`,
 usa prefixo REST `/api` e Socket.IO no namespace `/realtime`.
 
-Para desenvolvimento local, aplique migrations e seed com `supabase db reset`.
+Para desenvolvimento local, aplique migrations e seed com `supabase db reset`. Para
+deployment, use `npm ci && npm run build && npm start`; `npm start` executa Nest, não o
+servidor Express legado.
 
 ## Modelo de dados
 
@@ -41,6 +43,10 @@ Schema canônico em `supabase/migrations/` usa tabelas snake_case: `climatizers`
 - `GET/PUT /api/identificacao`, `GET /api/eventos`
 - `POST /api/telemetria`, `POST /api/vav/estado`, `POST /api/banheiro/luz`
 - `GET /api/health`
+
+O SQLite antigo está congelado e só permanece para inspeção durante janela de rollback.
+Veja [`docs/CUTOVER_RUNBOOK.md`](../../docs/CUTOVER_RUNBOOK.md) para decisão de migração
+de dados e configuração de deployment.
 
 ## Fluxo com ESP32
 

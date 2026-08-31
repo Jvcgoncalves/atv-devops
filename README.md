@@ -17,9 +17,10 @@ Cores* do TCC (azul técnico `#0F4C81`, verde/âmbar/vermelho para status, contr
 - **Auditoria / rastreabilidade**: log de eventos (alertas, ações do operador, falhas) e
   registros ambientais periódicos, com exportação em CSV — atende NBR 7256 e PMOC
   (Lei 13.589/2018), com valor de segurança jurídica em inspeções e acreditação.
-- **Camada de API** com modo *mock* (simulador embutido) e modo *real* (REST).
+- **Camada de API** com modo *mock* (simulador embutido) e modo *real* (REST + Socket.IO).
+- No modo real, Nest é único dono da ingestão MQTT; navegador recebe eventos pelo WebSocket.
 - **Contrato da API** completo em [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md):
-  endpoints REST, tópicos MQTT, integração ntfy.sh e schema SQLite.
+  endpoints REST, tópicos MQTT, integração ntfy.sh e schema Supabase.
 
 > Por padrão a dashboard roda em **modo simulado** — funciona sem o Arduino físico nem
 > backend. Ajuste os controles e veja temperatura/CO₂ reagirem e os alertas dispararem.
@@ -39,6 +40,7 @@ Comandos separados:
 ```bash
 npm run dev:web
 npm run dev:api
+npm start
 npm run build:front
 npm run build:api
 npm run test:front
@@ -47,14 +49,17 @@ npm run test:api
 
 ## Conectar ao backend real
 
-1. Implemente o backend conforme [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md)
-   (sugestão: Node/Express ou FastAPI + cliente MQTT + SQLite).
+1. Aplique a migration Supabase e suba a API Nest conforme [`apps/api/README.md`](apps/api/README.md).
 2. Crie `apps/web/.env`:
    ```
    VITE_API_MODE=real
    VITE_API_BASE=/api
+   API_PROXY_TARGET=http://localhost:3001
    ```
-3. Ajuste o `proxy.target` em `apps/web/vite.config.ts` para o endereço da API.
+   O proxy Vite encaminha `/api/*` para Nest em `http://localhost:3001` por padrão.
+   Para demo offline, omita `.env` ou use `VITE_API_MODE=mock`; nenhum backend é necessário.
+
+Para cutover/deployment, siga [`docs/CUTOVER_RUNBOOK.md`](docs/CUTOVER_RUNBOOK.md).
 
 ## Estrutura
 
@@ -68,12 +73,12 @@ apps/web/src/
   components/        # RoomCard, ClimatizadorPanel, BathroomExhaust, TelemetryChart...
   pages/             # Dashboard, Parametros, Alertas
   theme.ts, index.css# paleta e estilos do TCC
-apps/api/            # API Express/SQLite temporaria de compatibilidade
+apps/api/            # API NestJS/Supabase
 packages/contracts/  # contratos compartilhados (Phase 2)
 packages/domain/     # dominio compartilhado (Phase 2)
 packages/config/     # configuracao nao-secreta compartilhada
 docs/
-  API_CONTRACT.md    # contrato REST + MQTT + SQLite + ntfy.sh
+  API_CONTRACT.md    # contrato REST + MQTT + Supabase + ntfy.sh
 ```
 
 ## Observação sobre o protocolo

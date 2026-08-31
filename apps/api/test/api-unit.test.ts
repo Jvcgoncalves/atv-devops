@@ -121,6 +121,7 @@ test("TelemetryService validates, persists once, evaluates alerts, audits, and e
   assert.equal(calls.at(-1)[0], "event");
   assert.equal(calls.at(-1)[1], "telemetry.updated");
   assert.deepEqual(calls.at(-1)[2].source, "MQTT");
+  assert.deepEqual(calls.at(-1)[2].status, { temperatura: "normal", umidade: "normal", co2: "normal" });
 
   const duplicate = await service.ingest({ salaId: "sala-1", temperatura: 22.8, umidade: 52, co2: 700 }, "MQTT", "packet-1");
   assert.equal(duplicate.ok, true);
@@ -153,6 +154,7 @@ test("AlertsService deduplicates active alerts and acknowledgement emits update"
   const list = await service.acknowledge(first[0].id);
   assert.equal(list[0].reconhecido, true);
   assert.equal(realtime.at(-1)[0], "alert.updated");
+  assert.equal(realtime.at(-1)[1].action, "updated");
 });
 
 test("ThresholdsService rejects invalid ranges and persists valid updates", async () => {

@@ -9,7 +9,7 @@ test("RealtimeService emits unique monotonic envelopes", () => {
   const service = new RealtimeService();
   const events = [];
   service.subscribe((event) => events.push(event));
-  const first = service.publish("telemetry.updated", { roomId: "sala-1", temperature: 22, humidity: 50, co2: 700, source: "MQTT" });
+  const first = service.publish("telemetry.updated", { roomId: "sala-1", temperature: 22, humidity: 50, co2: 700, source: "MQTT", timestamp: "2026-08-31T12:00:00.000Z", status: { temperatura: "normal", umidade: "normal", co2: "normal" } });
   const second = service.publish("device.status.changed", { deviceId: "hvac/status", online: true });
 
   assert.equal(first.envelope.version, 1);
@@ -36,7 +36,7 @@ test("RealtimeGateway authenticates, sends one initial snapshot, and broadcasts 
     assert.equal(clientEvents[0][0], "system.snapshot");
     assert.equal(serverEvents.length, 0);
 
-    realtime.publish("telemetry.updated", { roomId: "sala-1", temperature: 22, humidity: 50, co2: 700, source: "MQTT" });
+    realtime.publish("telemetry.updated", { roomId: "sala-1", temperature: 22, humidity: 50, co2: 700, source: "MQTT", timestamp: "2026-08-31T12:00:00.000Z", status: { temperatura: "normal", umidade: "normal", co2: "normal" } });
     assert.equal(serverEvents.length, 1);
     assert.equal(serverEvents[0][0], "telemetry.updated");
 

@@ -13,7 +13,11 @@ export class MqttClientService {
   onModuleInit(): void {
     if (process.env.MQTT_ENABLED === "false") return;
     const url = process.env.MQTT_URL ?? "mqtt://broker.hivemq.com:1883";
-    const topic = process.env.MQTT_TOPIC ?? "hvac/#";
+    const topics = (process.env.MQTT_TOPIC ?? "hvac/sala/+/telemetria,tcc-hvac-kaue/airquality")
+      .split(",")
+      .map((topic) => topic.trim())
+      .filter(Boolean);
+    if (!topics.length) topics.push("hvac/#");
     this.client = mqtt.connect(url, {
       reconnectPeriod: 5000,
       username: process.env.MQTT_USERNAME,
@@ -21,8 +25,8 @@ export class MqttClientService {
     });
     this.client.on("connect", () => {
       this.connected = true;
-      this.logger.log(`MQTT connected; subscribing ${topic}`);
-      this.client?.subscribe(topic, (error) => {
+      this.logger.log(`MQTT connected; subscribing ${topics.join(", ")}`);
+      this.client?.subscribe(topics, (error) => {
         if (error) this.logger.error(`MQTT subscribe failed: ${error.message}`);
       });
     });

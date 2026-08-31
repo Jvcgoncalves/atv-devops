@@ -27,12 +27,21 @@ test("MQTT maps telemetry topic and payload to one ingestion call", async () => 
   assert.deepEqual(harness.calls.telemetry[0], [{ salaId: "sala-1", temperatura: 22.5, umidade: 50, co2: 700 }, "MQTT", "hvac/sala/1/telemetria:7"]);
 });
 
+test("MQTT maps unchanged ESP32 legacy topic to configured default room", async () => {
+  const harness = createHarness();
+  await harness.listener(message("tcc-hvac-kaue/airquality", { temperature: 22.5, humidity: 50, co2: 700 }, 9));
+  await settle();
+
+  assert.deepEqual(harness.calls.telemetry[0], [{ salaId: "sala-1", temperatura: 22.5, umidade: 50, co2: 700 }, "MQTT", "tcc-hvac-kaue/airquality:9"]);
+});
+
 test("MQTT routes VAV, bathroom, status, and malformed messages without cross-routing", async () => {
   const harness = createHarness();
   await harness.listener(message("hvac/sala/1/vav", { abertura: 60, estado: "ok" }));
   await harness.listener(message("hvac/banheiro/1/luz", { luz: true }));
   await harness.listener(message("hvac/status", { online: false }));
   await harness.listener({ topic: "hvac/sala/1/telemetria", payload: Buffer.from("bad"), messageId: 8 });
+  await harness.listener(message("hvac/sala/1/other", { temperatura: 22 }, 10));
   await settle();
 
   assert.deepEqual(harness.calls.vav, [["sala-1", 60, "ok"]]);

@@ -5,13 +5,13 @@ Este documento define a interface entre os três componentes do sistema:
 ```
  ┌──────────┐   MQTT    ┌─────────────┐   REST/JSON   ┌──────────────┐
  │ Arduino/ │ ────────▶ │   Backend   │ ◀───────────▶ │  Dashboard   │
- │  ESP32   │ ◀──────── │ (API + bridge)│             │   (React)    │
+ │  ESP32   │ ◀──────── │ NestJS API   │             │   (React)    │
  └──────────┘  comandos └─────────────┘                └──────────────┘
                               │ POST
                               ▼
                          ntfy.sh (alertas)
                               │
-                          SQLite (histórico/eventos)
+                       Supabase Postgres
 ```
 
 Arquitetura escolhida: **ambos os caminhos**. O Arduino publica telemetria via **MQTT**
@@ -19,6 +19,9 @@ Arquitetura escolhida: **ambos os caminhos**. O Arduino publica telemetria via *
 caminho alternativo/redundante. Os comandos do backend para o campo vão por MQTT.
 A dashboard usa REST para snapshot inicial, comandos, configuração e histórico, e
 WebSocket para atualizações ao vivo enviadas pelo backend.
+
+Supabase Postgres é fonte de verdade. NestJS é único dono da persistência e da ingestão
+MQTT; o SQLite legado está congelado e não faz parte do deployment.
 
 > A dashboard React já implementa este contrato. No modo `mock` ela usa um simulador
 > interno (`apps/web/src/api/mockBackend.ts`) com exatamente os mesmos formatos abaixo, então ao
@@ -165,7 +168,9 @@ Envelope mínimo:
     "temperature": 22.6,
     "humidity": 51,
     "co2": 720,
-    "source": "MQTT"
+    "source": "MQTT",
+    "timestamp": "2026-08-31T12:00:00.000Z",
+    "status": { "temperatura": "normal", "umidade": "normal", "co2": "normal" }
   }
 }
 ```
@@ -208,8 +213,8 @@ Broker sugerido: Mosquitto. Formato de payload: JSON.
 | `hvac/sala/1/vav/set` | `{ "abertura": 40 }` |
 | `hvac/clima/1/set` | `{ "ligado": true, "setpoint": 23 }` |
 
-> O backend assina `hvac/#`, atualiza o estado em memória + SQLite, reavalia os parâmetros
-> e republica comandos quando a dashboard chama os endpoints `PUT`.
+> O Nest assina os tópicos configurados, persiste no Supabase, reavalia os parâmetros e
+> republica comandos quando a dashboard chama os endpoints `PUT`.
 
 ### 4.1 Controle automático da VAV (essência da automação)
 
@@ -272,7 +277,19 @@ Para receber no celular: instale o app **ntfy** e assine o tópico configurado e
 
 ---
 
-## 6. Persistência — SQLite
+## 6. Persistência — Supabase Postgres
+
+O schema canônico está em
+[`supabase/migrations/20260831200000_hvac_initial_schema.sql`](../supabase/migrations/20260831200000_hvac_initial_schema.sql)
+e o seed de desenvolvimento em [`supabase/seed.sql`](../supabase/seed.sql). O Nest usa
+um cliente server-only; o navegador não recebe credenciais nem acessa tabelas diretamente.
+
+Tabelas persistidas: `climatizers`, `rooms`, `vavs`, `sensors`, `bathrooms`,
+`alert_thresholds`, `sensor_readings`, `alerts`, `ntfy_config`, `ntfy_logs`,
+`audit_events` e `identification`. Colunas usam `snake_case` no Postgres e são mapeadas
+para os nomes do contrato REST. RLS está habilitado nas tabelas públicas.
+
+### Schema SQLite legado (somente referência de rollback)
 
 ```sql
 CREATE TABLE leituras (
@@ -315,7 +332,8 @@ CREATE INDEX idx_eventos_ts ON eventos (ts);
 
 ### Rastreabilidade e base legal (por que registrar)
 
-O log de eventos + o registro contínuo de telemetria (`leituras`) dão **rastreabilidade**,
+O log de eventos + o registro contínuo de telemetria (`audit_events` e `sensor_readings`)
+dão **rastreabilidade**,
 exigida para ambientes hospitalares e com valor de **segurança jurídica**:
 
 - **ABNT NBR 7256** — exige monitoramento e **registro contínuo** de temperatura, umidade e

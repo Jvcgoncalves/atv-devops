@@ -55,13 +55,13 @@ export class AlertsService {
     if (!current) throw new NotFoundException("alerta nao encontrado");
     const alert = mapAlert(await this.repository.acknowledgeAlert(id));
     await this.audit.record("reconhecimento", `Alerta reconhecido: ${alert.mensagem}`, alert.salaId, "operador");
-    this.realtime.publish("alert.updated", { alert });
+    this.realtime.publish("alert.updated", { alert, action: "updated" });
     return this.list();
   }
 
   async clearAcknowledged(): Promise<Alert[]> {
     const removed = await this.repository.deleteAcknowledgedAlerts();
-    for (const row of removed) this.realtime.publish("alert.updated", { alert: mapAlert(row) });
+    for (const row of removed) this.realtime.publish("alert.updated", { alert: mapAlert(row), action: "removed" });
     return this.list();
   }
 }

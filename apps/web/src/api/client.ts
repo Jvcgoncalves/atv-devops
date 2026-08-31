@@ -1,4 +1,6 @@
 import { mock, startSimulation } from "./mockBackend.ts";
+import { resolveApiBase, resolveApiMode } from "./runtime-config.ts";
+import { assertSystemStateShape } from "./response-shapes.ts";
 import type { ApiClient } from "../types/ui.ts";
 import type { ApiMode } from "../types/ui.ts";
 import type {
@@ -11,8 +13,8 @@ import type {
   SystemState,
 } from "@hvac/contracts";
 
-const MODE: ApiMode = import.meta.env.VITE_API_MODE === "real" ? "real" : "mock";
-const BASE = import.meta.env.VITE_API_BASE || "/api";
+const MODE: ApiMode = resolveApiMode(import.meta.env?.VITE_API_MODE);
+const BASE = resolveApiBase(import.meta.env?.VITE_API_BASE);
 
 if (MODE === "mock") startSimulation();
 
@@ -34,7 +36,9 @@ export const api: ApiClient = {
 
   // GET /api/estado  -> estado completo do sistema
   getSystemState() {
-    return MODE === "mock" ? tick(mock.getSystemState()) : http<SystemState>("/estado");
+    return MODE === "mock"
+      ? tick(assertSystemStateShape(mock.getSystemState()))
+      : http<unknown>("/estado").then(assertSystemStateShape);
   },
 
   // GET /api/historico/:salaId/:metrica

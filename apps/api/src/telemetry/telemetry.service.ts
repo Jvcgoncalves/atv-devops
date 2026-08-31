@@ -51,6 +51,8 @@ export class TelemetryService {
       humidity: updated.umidade,
       co2: updated.co2,
       source,
+      timestamp: updated.ultimaLeitura,
+      status: updated.status,
     });
     return { ok: true, idLeitura: result.ids[0] };
   }

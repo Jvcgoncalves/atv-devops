@@ -1,21 +1,28 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 
-// Proxy /api para o backend real durante o desenvolvimento.
-// Ajuste o "target" para o endereco do seu backend (Node/Express, FastAPI, etc.).
-export default defineConfig({
-  plugins: [react()],
-  // mqtt.js (no navegador) espera a variavel global "global"
-  define: {
-    global: "globalThis",
-  },
-  server: {
-    port: 5173,
-    proxy: {
-      "/api": {
-        target: "http://localhost:3001",
-        changeOrigin: true,
+const DEFAULT_NEST_API_TARGET = "http://localhost:3001";
+
+// /api permanece mesma base pública; proxy encaminha requests ao Nest.
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "");
+  const nestApiTarget = env.API_PROXY_TARGET?.trim() || DEFAULT_NEST_API_TARGET;
+
+  return {
+    plugins: [react()],
+    server: {
+      port: 5173,
+      proxy: {
+        "/api": {
+          target: nestApiTarget,
+          changeOrigin: true,
+        },
+        "/socket.io": {
+          target: nestApiTarget,
+          changeOrigin: true,
+          ws: true,
+        },
       },
     },
-  },
+  };
 });

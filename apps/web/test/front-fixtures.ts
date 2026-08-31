@@ -1,0 +1,51 @@
+export const demoRoom = {
+  id: "sala-1",
+  nome: "Sala 1",
+  climatizadorId: "clima-1",
+  setpoint: 22,
+  temperatura: 22.4,
+  umidade: 50,
+  co2: 640,
+  vav: { abertura: 40, estado: "ok", modo: "manual", motivo: "manual" },
+  ultimaLeitura: "2026-08-31T12:00:00.000Z",
+  status: { temperatura: "normal", umidade: "normal", co2: "normal" },
+  fonte: "MOCK",
+};
+
+export const demoState = {
+  timestamp: "2026-08-31T12:00:00.000Z",
+  conexao: { online: true, fonte: "MOCK" },
+  salas: [demoRoom],
+  climatizadores: [{ id: "clima-1", nome: "Climatizador A", salas: ["sala-1"], ligado: true, tempInsuflamento: 15 }],
+  banheiros: [{ id: "ban-1", nome: "Banheiro 1", luz: false }, { id: "ban-2", nome: "Banheiro 2", luz: true }],
+  exaustao: { ligada: true, logica: "OR" },
+};
+
+export const demoContextValue = {
+  state: demoState,
+  alerts: [],
+  thresholds: null,
+  error: null,
+  mode: "mock",
+  refresh: async () => undefined,
+  liveConfig: { enabled: false, salaAlvo: "sala-1" },
+  liveStatus: {
+    connected: false,
+    connecting: false,
+    lastData: null,
+    lastTs: null,
+    error: null,
+    url: "mock",
+    topic: "telemetry.updated",
+  },
+  setLiveConfig: () => undefined,
+  saveThresholds: async () => ({}),
+  setVav: async () => undefined,
+  setVavMode: async () => undefined,
+  setRoomSetpoint: async () => undefined,
+  setVavFault: async () => undefined,
+  setClimatizador: async () => undefined,
+  setBathroomLight: async () => undefined,
+  acknowledgeAlert: async () => undefined,
+  clearAcknowledged: async () => undefined,
+};

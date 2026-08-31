@@ -8,20 +8,22 @@
     "dev": "vite",
     "build": "tsc -p tsconfig.json --noEmit && vite build",
     "preview": "vite preview",
-    "test": "node --test"
+    "test": "node --import tsx --test test/*.test.ts test/*.test.tsx"
   },
   "dependencies": {
-    "@hvac/domain": "1.0.0",
     "@hvac/contracts": "1.0.0",
-    "mqtt": "^5.10.1",
+    "@hvac/domain": "1.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.2",
-    "recharts": "^2.12.7"
+    "recharts": "^2.12.7",
+    "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
+    "react-test-renderer": "^18.3.1",
     "supabase": "^2.116.0",
+    "tsx": "^4.23.13",
     "vite": "^5.4.8"
   }
 }
