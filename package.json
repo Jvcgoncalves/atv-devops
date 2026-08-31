@@ -33,6 +33,11 @@
     "test:domain:coverage": "npm --workspace @hvac/domain run test:coverage",
     "test:config": "npm --workspace @hvac/config run test",
     "test:api": "npm --workspace @hvac/api run test",
+    "test:api:unit": "npm --workspace @hvac/api run test:unit",
+    "test:api:integration": "npm --workspace @hvac/api run test:integration",
+    "test:api:e2e": "npm --workspace @hvac/api run test:e2e",
+    "test:api:mqtt": "npm --workspace @hvac/api run test:mqtt",
+    "test:api:websocket": "npm --workspace @hvac/api run test:websocket",
     "test:front": "npm --workspace @hvac/web run test"
   },
   "devDependencies": {

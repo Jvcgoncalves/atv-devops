@@ -69,6 +69,11 @@ test("threshold defaults are fresh and normalize numeric values", () => {
     umidade: { min: 40, max: 60 },
     co2: { warn: 800, critical: 1000 },
   }), false);
+  assert.equal(validateThresholds({
+    temperatura: { min: -1, max: 26 },
+    umidade: { min: 40, max: 60 },
+    co2: { warn: 800, critical: 1000 },
+  }), false);
 });
 
 test("normalization handles IDs, partial telemetry and invalid input", () => {

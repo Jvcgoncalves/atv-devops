@@ -1,0 +1,80 @@
+import { Inject, Injectable, Logger } from "@nestjs/common";
+import { mapMqttPayloadToTelemetry, normalizeRoomId } from "@hvac/domain";
+import { BathroomsService } from "../bathrooms/bathrooms.service.js";
+import { RealtimeService } from "../realtime/realtime.service.js";
+import { RoomsService } from "../rooms/rooms.service.js";
+import { TelemetryService } from "../telemetry/telemetry.service.js";
+import { MqttClientService } from "./mqtt-client.service.js";
+import type { MqttMessage } from "./mqtt.types.js";
+
+@Injectable()
+export class MqttIngestionService {
+  private readonly logger = new Logger(MqttIngestionService.name);
+
+  constructor(
+    @Inject(MqttClientService) private readonly mqtt: MqttClientService,
+    @Inject(TelemetryService) private readonly telemetry: TelemetryService,
+    @Inject(RoomsService) private readonly rooms: RoomsService,
+    @Inject(BathroomsService) private readonly bathrooms: BathroomsService,
+    @Inject(RealtimeService) private readonly realtime: RealtimeService,
+  ) {}
+
+  onModuleInit(): void {
+    this.mqtt.subscribe((message) => { void this.handle(message); });
+  }
+
+  private async handle(message: MqttMessage): Promise<void> {
+    try {
+      if (this.handleStatus(message)) return;
+      if (await this.handleVav(message)) return;
+      if (await this.handleBathroom(message)) return;
+      const telemetry = mapMqttPayloadToTelemetry({
+        topic: message.topic,
+        payload: message.payload,
+        defaultRoomId: process.env.MQTT_DEFAULT_ROOM_ID ?? null,
+      });
+      if (!telemetry) return;
+      const sourceMessageId = message.messageId == null ? undefined : `${message.topic}:${message.messageId}`;
+      await this.telemetry.ingest(telemetry, "MQTT", sourceMessageId);
+    } catch (error) {
+      this.logger.error(`MQTT message rejected: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private handleStatus(message: MqttMessage): boolean {
+    if (!message.topic.endsWith("/status") && message.topic !== "hvac/status") return false;
+    const payload = this.json(message);
+    if (typeof payload?.online !== "boolean") return true;
+    this.realtime.publish("device.status.changed", { deviceId: message.topic, online: payload.online });
+    return true;
+  }
+
+  private async handleVav(message: MqttMessage): Promise<boolean> {
+    const match = message.topic.match(/(?:^|\/)sala\/([^/]+)\/vav$/);
+    if (!match) return false;
+    const roomId = normalizeRoomId(match[1]);
+    const payload = this.json(message);
+    if (!roomId || !payload || typeof payload.abertura !== "number" || !Number.isFinite(payload.abertura) || payload.abertura < 0 || payload.abertura > 100 || (payload.estado !== "ok" && payload.estado !== "falha")) return true;
+    await this.rooms.ingestVavState(roomId, payload.abertura, payload.estado);
+    return true;
+  }
+
+  private async handleBathroom(message: MqttMessage): Promise<boolean> {
+    const match = message.topic.match(/(?:^|\/)banheiro\/([^/]+)\/luz$/);
+    if (!match) return false;
+    const bathroomId = match[1].startsWith("ban-") ? match[1] : `ban-${match[1]}`;
+    const payload = this.json(message);
+    if (!payload || typeof payload.luz !== "boolean") return true;
+    await this.bathrooms.update(bathroomId, payload.luz, false);
+    return true;
+  }
+
+  private json(message: MqttMessage): Record<string, unknown> | null {
+    try {
+      const value: unknown = JSON.parse(message.payload.toString("utf8"));
+      return value && typeof value === "object" ? value as Record<string, unknown> : null;
+    } catch {
+      return null;
+    }
+  }
+}

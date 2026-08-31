@@ -48,7 +48,16 @@ export function validateThresholds(thresholds: unknown): thresholds is RoomThres
   if (!thresholds || typeof thresholds !== "object") return false;
   const source = thresholds as Partial<RoomThresholds>;
   if (!source.temperatura || !source.umidade || !source.co2) return false;
+  const temperature = source.temperatura;
+  const humidity = source.umidade;
+  const co2 = source.co2;
   return (
+    Number.isFinite(temperature.min) && Number.isFinite(temperature.max) &&
+    Number.isFinite(humidity.min) && Number.isFinite(humidity.max) &&
+    Number.isFinite(co2.warn) && Number.isFinite(co2.critical) &&
+    temperature.min >= 0 && temperature.max <= 80 &&
+    humidity.min >= 0 && humidity.max <= 100 &&
+    co2.warn >= 0 && co2.critical <= 100000 &&
     source.temperatura.min < source.temperatura.max &&
     source.umidade.min < source.umidade.max &&
     source.co2.warn < source.co2.critical

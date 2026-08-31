@@ -1,65 +1,53 @@
-# API HVAC — pacote de compatibilidade temporario
+# API HVAC — NestJS + Supabase
 
-API legada do TCC: banco **SQLite** modelado **100% conforme a DER** (7 entidades) e uma
-**API REST** (Express) sobre elas, com **ingestão de leituras**, **avaliação de limites →
-alertas**, **ponte MQTT** (recebe os dados do ESP32) e **ntfy.sh**.
+API NestJS do dashboard HVAC. Supabase Postgres é fonte de verdade; Nest mantém REST
+compatível com dashboard, ingere MQTT/REST, persiste telemetria, gera alertas, publica
+comandos MQTT e envia atualizações por Socket.IO.
 
 ## Requisitos
+
 - Node.js 22.6+ e npm 10.x.
 
 ## Como rodar
+
 ```bash
 npm install
+cp apps/api/.env.example apps/api/.env
 npm run dev:api
 ```
 
-Ou, dentro do workspace:
+Informe `SUPABASE_URL` e chave server-only (`SUPABASE_SECRET_KEY` ou
+`SUPABASE_SERVICE_ROLE_KEY`) em `apps/api/.env`. A API sobe em `http://localhost:3001`,
+usa prefixo REST `/api` e Socket.IO no namespace `/realtime`.
 
-```bash
-npm start --workspace @hvac/api
-```
-- O arquivo do banco **`hvac.db` é criado automaticamente** na primeira execução, com as
-  tabelas da DER e um *seed* inicial (2 climatizadores, 4 salas, 4 VAVs, sensores e limites).
-- A API sobe em `http://localhost:3001`.
-- A ponte MQTT assina o tópico do ESP e grava as leituras (configure em `.env`).
+Para desenvolvimento local, aplique migrations e seed com `supabase db reset`.
 
-Para configurar broker/tópico/sala e ntfy, copie `.env.example` para `.env` e ajuste.
+## Modelo de dados
 
-## Modelo de dados (DER)
-Tabelas: `CLIMATIZADOR`, `SALA`, `VAV`, `SENSOR`, `LIMITE_ALERTA`, `ALERTA`, `LEITURA_SENSOR`
-(ver `schema.sql`). Fidelidade à DER: os nomes `stauts` (CLIMATIZADOR) e `qualidade-leitura`
-(LEITURA_SENSOR) foram mantidos exatamente como na DER.
+Schema canônico em `supabase/migrations/` usa tabelas snake_case: `climatizers`, `rooms`,
+`vavs`, `sensors`, `alert_thresholds`, `sensor_readings`, `alerts`, `bathrooms`,
+`ntfy_config`, `ntfy_logs`, `audit_events` e `identification`.
 
-## Endpoints
-CRUD para cada entidade (`GET` lista, `GET/:id`, `POST`, `PUT/:id`, `DELETE/:id`):
+## Rotas compatíveis
 
-| Recurso | Rota base |
-|---|---|
-| Climatizadores | `/api/climatizadores` |
-| Salas | `/api/salas` |
-| VAVs | `/api/vavs` |
-| Sensores | `/api/sensores` |
-| Limites de alerta | `/api/limites` |
-| Alertas | `/api/alertas` |
-| Leituras | `/api/leituras` |
-
-Auxiliares:
-- `GET /api/salas/:id/sensores` — sensores de uma sala
-- `GET /api/sensores/:id/leituras` — histórico de um sensor
-- `POST /api/telemetria` — grava leitura e avalia alertas
-  `body: { "id_sensor": 1, "valor": 24.3, "qualidade": "boa" }`
+- `GET /api/estado`
+- `GET /api/historico/:salaId/:metrica`
+- `GET/PUT /api/parametros[/:salaId]`
+- `GET/POST/DELETE /api/alertas...`
+- `PUT /api/salas/:salaId/{setpoint,vav,vav/modo,vav/falha}`
+- `GET/PUT /api/climatizadores/:id`
+- `GET/PUT /api/banheiros/:id`
+- `GET/PUT /api/ntfy`, `GET /api/ntfy/log`
+- `GET/PUT /api/identificacao`, `GET /api/eventos`
+- `POST /api/telemetria`, `POST /api/vav/estado`, `POST /api/banheiro/luz`
 - `GET /api/health`
 
-## Fluxo com o ESP32
-```
-ESP32 --(MQTT)--> broker --(mqttBridge)--> LEITURA_SENSOR (SQLite)
-                                        --> avalia LIMITE_ALERTA --> ALERTA + ntfy.sh
-```
-O `mqttBridge` mapeia o JSON do ESP (`temperature`, `humidity`, `co2`) para os SENSORES da
-sala configurada (`SALA_ID`), por `tipo` (`temperatura`, `umidade`, `co2`).
+## Fluxo com ESP32
 
-## Observações
-- `better-sqlite3` é um módulo nativo; o `npm install` compila/baixa o binário
-  automaticamente. Se necessário, tenha as ferramentas de build do seu SO.
-- Este pacote permanece somente para compatibilidade durante Phase 1. A implementação
-  NestJS + Supabase começa na Phase 4.
+```text
+ESP32 --(MQTT)--> broker --(Nest MQTT adapter)--> Supabase sensor_readings
+                                             --> alerts + ntfy.sh + Socket.IO
+```
+
+Nest é único dono da ingestão MQTT. Dashboard recebe atualizações ao vivo por WebSocket;
+não conecta diretamente ao broker.
