@@ -1,17 +1,22 @@
-# Backend HVAC — Node + SQLite (conforme a DER)
+# API HVAC — pacote de compatibilidade temporario
 
-Backend do TCC: banco **SQLite** modelado **100% conforme a DER** (7 entidades) e uma
+API legada do TCC: banco **SQLite** modelado **100% conforme a DER** (7 entidades) e uma
 **API REST** (Express) sobre elas, com **ingestão de leituras**, **avaliação de limites →
 alertas**, **ponte MQTT** (recebe os dados do ESP32) e **ntfy.sh**.
 
 ## Requisitos
-- Node.js 18+ (testado com Node 22).
+- Node.js 22.x e npm 10.x.
 
 ## Como rodar
 ```bash
-cd backend
 npm install
-npm start
+npm run dev:api
+```
+
+Ou, dentro do workspace:
+
+```bash
+npm start --workspace @hvac/api
 ```
 - O arquivo do banco **`hvac.db` é criado automaticamente** na primeira execução, com as
   tabelas da DER e um *seed* inicial (2 climatizadores, 4 salas, 4 VAVs, sensores e limites).
@@ -56,5 +61,5 @@ sala configurada (`SALA_ID`), por `tipo` (`temperatura`, `umidade`, `co2`).
 ## Observações
 - `better-sqlite3` é um módulo nativo; o `npm install` compila/baixa o binário
   automaticamente. Se necessário, tenha as ferramentas de build do seu SO.
-- Para ligar a dashboard React a este backend, será preciso um pequeno adaptador (as
-  respostas aqui seguem a DER normalizada). Posso implementar quando quiser.
+- Este pacote permanece somente para compatibilidade durante Phase 1. A implementação
+  NestJS + Supabase começa na Phase 4.

@@ -3,22 +3,26 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Dashboard de supervisao e controle para sistema de automacao HVAC (TCC)",
+  "description": "Monorepo do dashboard de automacao HVAC (TCC)",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22 <23",
+    "npm": ">=10 <11"
+  },
+  "packageManager": "npm@10.9.3",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "mqtt": "^5.10.1",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^6.26.2",
-    "recharts": "^2.12.7"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-react": "^4.3.1",
-    "supabase": "^2.116.0",
-    "vite": "^5.4.8"
+    "dev": "npm run dev:web",
+    "dev:web": "npm --workspace @hvac/web run dev",
+    "dev:api": "npm --workspace @hvac/api run dev",
+    "build": "npm run build:front && npm run build:api",
+    "build:front": "npm --workspace @hvac/web run build",
+    "build:api": "npm --workspace @hvac/api run build",
+    "preview": "npm --workspace @hvac/web run preview",
+    "test": "npm run test:api && npm run test:front",
+    "test:api": "npm --workspace @hvac/api run test",
+    "test:front": "npm --workspace @hvac/web run test"
   }
 }

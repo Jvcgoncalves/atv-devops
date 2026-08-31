@@ -26,7 +26,7 @@ Cores* do TCC (azul técnico `#0F4C81`, verde/âmbar/vermelho para status, contr
 
 ## Como rodar
 
-Requer Node.js 18+.
+Requer Node.js 22.x e npm 10.x.
 
 ```bash
 npm install
@@ -34,21 +34,32 @@ npm run dev
 ```
 Acesse <http://localhost:5173>.
 
+Comandos separados:
+
+```bash
+npm run dev:web
+npm run dev:api
+npm run build:front
+npm run build:api
+npm run test:front
+npm run test:api
+```
+
 ## Conectar ao backend real
 
 1. Implemente o backend conforme [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md)
    (sugestão: Node/Express ou FastAPI + cliente MQTT + SQLite).
-2. Crie um arquivo `.env` na raiz:
+2. Crie `apps/web/.env`:
    ```
    VITE_API_MODE=real
    VITE_API_BASE=/api
    ```
-3. Ajuste o `proxy.target` em `vite.config.js` para o endereço do backend.
+3. Ajuste o `proxy.target` em `apps/web/vite.config.js` para o endereço da API.
 
 ## Estrutura
 
 ```
-src/
+apps/web/src/
   api/
     client.js        # acesso à API (mock | real)
     mockBackend.js   # simulador (telemetria, alertas, ntfy) — mesmos formatos do contrato
@@ -57,6 +68,10 @@ src/
   components/        # RoomCard, ClimatizadorPanel, BathroomExhaust, TelemetryChart...
   pages/             # Dashboard, Parametros, Alertas
   theme.js, index.css# paleta e estilos do TCC
+apps/api/            # API Express/SQLite temporaria de compatibilidade
+packages/contracts/  # contratos compartilhados (Phase 2)
+packages/domain/     # dominio compartilhado (Phase 2)
+packages/config/     # configuracao nao-secreta compartilhada
 docs/
   API_CONTRACT.md    # contrato REST + MQTT + SQLite + ntfy.sh
 ```

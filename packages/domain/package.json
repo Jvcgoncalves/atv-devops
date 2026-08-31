@@ -1,0 +1,13 @@
+{
+  "name": "@hvac/domain",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Regras de dominio compartilhadas do sistema HVAC",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test"
+  }
+}

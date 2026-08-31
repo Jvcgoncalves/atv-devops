@@ -1,0 +1,13 @@
+{
+  "name": "@hvac/config",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Configuracao compartilhada nao-secreta do sistema HVAC",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test"
+  }
+}

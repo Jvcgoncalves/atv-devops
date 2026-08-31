@@ -1,13 +1,15 @@
 {
-  "name": "hvac-backend-tcc",
+  "name": "@hvac/api",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Backend Node + SQLite (conforme DER) para o sistema de automacao HVAC",
+  "description": "API de compatibilidade temporaria durante migracao para NestJS",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "init-db": "node db.js"
+    "init-db": "node db.js",
+    "build": "node --check server.js && node --check db.js && node --check logic.js && node --check mqttBridge.js",
+    "test": "node --test"
   },
   "dependencies": {
     "better-sqlite3": "^11.8.1",

@@ -21,11 +21,11 @@ A dashboard usa REST para snapshot inicial, comandos, configuração e históric
 WebSocket para atualizações ao vivo enviadas pelo backend.
 
 > A dashboard React já implementa este contrato. No modo `mock` ela usa um simulador
-> interno (`src/api/mockBackend.js`) com exatamente os mesmos formatos abaixo, então ao
+> interno (`apps/web/src/api/mockBackend.js`) com exatamente os mesmos formatos abaixo, então ao
 > ligar o backend real basta setar `VITE_API_MODE=real`.
 
 **Baseline de compatibilidade:** as rotas REST e os nomes JSON deste documento, além dos
-métodos usados em `src/api/client.js`, são preservados durante a migração. O backend Nest
+métodos usados em `apps/web/src/api/client.js`, são preservados durante a migração. O backend Nest
 é o único consumidor MQTT que persiste telemetria. A dashboard não se conecta diretamente
 ao MQTT, evitando leituras e alertas duplicados.
 
