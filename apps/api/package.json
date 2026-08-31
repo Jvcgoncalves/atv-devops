@@ -5,13 +5,14 @@
   "type": "module",
   "description": "API de compatibilidade temporaria durante migracao para NestJS",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js",
-    "init-db": "node db.js",
-    "build": "node --check server.js && node --check db.js && node --check logic.js && node --check mqttBridge.js",
-    "test": "node --test"
+    "start": "node --experimental-strip-types server.ts",
+    "dev": "node --watch --experimental-strip-types server.ts",
+    "init-db": "node --experimental-strip-types db.ts",
+    "build": "tsc -p tsconfig.json --noEmit",
+    "test": "node --experimental-strip-types --test"
   },
   "dependencies": {
+    "@hvac/domain": "1.0.0",
     "better-sqlite3": "^11.8.1",
     "cors": "^2.8.5",
     "express": "^4.21.2",

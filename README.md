@@ -26,7 +26,7 @@ Cores* do TCC (azul técnico `#0F4C81`, verde/âmbar/vermelho para status, contr
 
 ## Como rodar
 
-Requer Node.js 22.x e npm 10.x.
+Requer Node.js 22.6+ e npm 10.x.
 
 ```bash
 npm install
@@ -54,20 +54,20 @@ npm run test:api
    VITE_API_MODE=real
    VITE_API_BASE=/api
    ```
-3. Ajuste o `proxy.target` em `apps/web/vite.config.js` para o endereço da API.
+3. Ajuste o `proxy.target` em `apps/web/vite.config.ts` para o endereço da API.
 
 ## Estrutura
 
 ```
 apps/web/src/
   api/
-    client.js        # acesso à API (mock | real)
-    mockBackend.js   # simulador (telemetria, alertas, ntfy) — mesmos formatos do contrato
+    client.ts        # acesso à API (mock | real)
+    mockBackend.ts   # simulador (telemetria, alertas, ntfy) — mesmos formatos do contrato
   context/
-    ConfigContext.jsx# estado global + polling
+    ConfigContext.tsx# estado global + polling
   components/        # RoomCard, ClimatizadorPanel, BathroomExhaust, TelemetryChart...
   pages/             # Dashboard, Parametros, Alertas
-  theme.js, index.css# paleta e estilos do TCC
+  theme.ts, index.css# paleta e estilos do TCC
 apps/api/            # API Express/SQLite temporaria de compatibilidade
 packages/contracts/  # contratos compartilhados (Phase 2)
 packages/domain/     # dominio compartilhado (Phase 2)

@@ -6,11 +6,13 @@
   "description": "Dashboard React/Vite do sistema de automacao HVAC",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc -p tsconfig.json --noEmit && vite build",
     "preview": "vite preview",
     "test": "node --test"
   },
   "dependencies": {
+    "@hvac/domain": "1.0.0",
+    "@hvac/contracts": "1.0.0",
     "mqtt": "^5.10.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

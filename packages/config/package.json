@@ -5,9 +5,10 @@
   "type": "module",
   "description": "Configuracao compartilhada nao-secreta do sistema HVAC",
   "exports": {
-    ".": "./src/index.js"
+    ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "node --test"
+    "build": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build"
   }
 }

@@ -5,7 +5,7 @@ API legada do TCC: banco **SQLite** modelado **100% conforme a DER** (7 entidade
 alertas**, **ponte MQTT** (recebe os dados do ESP32) e **ntfy.sh**.
 
 ## Requisitos
-- Node.js 22.x e npm 10.x.
+- Node.js 22.6+ e npm 10.x.
 
 ## Como rodar
 ```bash

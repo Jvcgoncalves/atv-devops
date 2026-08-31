@@ -9,7 +9,7 @@
     "packages/*"
   ],
   "engines": {
-    "node": ">=22 <23",
+    "node": ">=22.6 <23",
     "npm": ">=10 <11"
   },
   "packageManager": "npm@10.9.3",
@@ -17,12 +17,31 @@
     "dev": "npm run dev:web",
     "dev:web": "npm --workspace @hvac/web run dev",
     "dev:api": "npm --workspace @hvac/api run dev",
-    "build": "npm run build:front && npm run build:api",
+    "build": "npm run build:shared && npm run build:front && npm run build:api",
+    "build:shared": "npm run build:contracts && npm run build:domain && npm run build:config",
+    "build:contracts": "npm --workspace @hvac/contracts run build",
+    "build:domain": "npm --workspace @hvac/domain run build",
+    "build:config": "npm --workspace @hvac/config run build",
     "build:front": "npm --workspace @hvac/web run build",
     "build:api": "npm --workspace @hvac/api run build",
     "preview": "npm --workspace @hvac/web run preview",
-    "test": "npm run test:api && npm run test:front",
+    "test": "npm run test:shared && npm run test:api && npm run test:front",
+    "test:shared": "npm run test:contracts && npm run test:domain && npm run test:config",
+    "test:shared:coverage": "npm run test:contracts && npm run test:domain:coverage && npm run test:config",
+    "test:contracts": "npm --workspace @hvac/contracts run test",
+    "test:domain": "npm --workspace @hvac/domain run test",
+    "test:domain:coverage": "npm --workspace @hvac/domain run test:coverage",
+    "test:config": "npm --workspace @hvac/config run test",
     "test:api": "npm --workspace @hvac/api run test",
     "test:front": "npm --workspace @hvac/web run test"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.4.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "typescript": "^5.7.2"
   }
 }

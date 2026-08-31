@@ -1,3 +1,3 @@
 # Shared types
 
-Phase 1 placeholder. Add type aliases, unions, and enums here in Phase 2.
+Type aliases and literal unions only. Runtime values belong in `packages/domain`.

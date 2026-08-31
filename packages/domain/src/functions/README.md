@@ -1,3 +1,4 @@
 # Domain functions
 
-Phase 1 placeholder. Add shared runtime functions here in Phase 2.
+Pure shared HVAC rules: status, thresholds, VAV control, exhaust interlock, alert
+evaluation, telemetry normalization, and MQTT mapping.

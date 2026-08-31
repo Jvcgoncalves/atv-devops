@@ -1,3 +1,4 @@
 # Domain classes
 
-Phase 1 placeholder. Add shared runtime classes here in Phase 2.
+No shared class required yet. Keep future classes here and keep type declarations in
+`packages/contracts`.

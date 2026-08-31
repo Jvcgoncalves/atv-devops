@@ -1,3 +1,4 @@
 # Shared interfaces
 
-Phase 1 placeholder. Add interfaces here in Phase 2.
+API, persistence-facing, telemetry, MQTT, and WebSocket shapes. Files here contain
+interfaces only; transport validation classes belong to the API package.
