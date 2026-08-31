@@ -17,11 +17,17 @@ Este documento define a interface entre os três componentes do sistema:
 Arquitetura escolhida: **ambos os caminhos**. O Arduino publica telemetria via **MQTT**
 (caminho principal, contínuo) e também pode usar **REST** (`POST /api/telemetria`) como
 caminho alternativo/redundante. Os comandos do backend para o campo vão por MQTT.
-A dashboard fala **somente REST** com o backend.
+A dashboard usa REST para snapshot inicial, comandos, configuração e histórico, e
+WebSocket para atualizações ao vivo enviadas pelo backend.
 
 > A dashboard React já implementa este contrato. No modo `mock` ela usa um simulador
 > interno (`src/api/mockBackend.js`) com exatamente os mesmos formatos abaixo, então ao
 > ligar o backend real basta setar `VITE_API_MODE=real`.
+
+**Baseline de compatibilidade:** as rotas REST e os nomes JSON deste documento, além dos
+métodos usados em `src/api/client.js`, são preservados durante a migração. O backend Nest
+é o único consumidor MQTT que persiste telemetria. A dashboard não se conecta diretamente
+ao MQTT, evitando leituras e alertas duplicados.
 
 ---
 
@@ -128,6 +134,45 @@ Base URL: `/api` (configurável via `VITE_API_BASE`).
   "exaustao": { "ligada": false, "logica": "OR" }
 }
 ```
+
+### 2.1 Atualizações ao vivo por WebSocket
+
+O canal WebSocket backend → dashboard é obrigatório em desenvolvimento, staging e
+produção. O Nest publica eventos somente depois de validar e persistir a alteração recebida
+por MQTT ou pelo POST REST alternativo.
+
+Neste contrato, os canais têm responsabilidades diferentes: MQTT conecta ESP32/edge ao
+backend e leva comandos de volta aos dispositivos; WebSocket conecta o backend à dashboard.
+Se o broker usar MQTT sobre WebSocket, isso não transforma a dashboard em dona da ingestão.
+
+Eventos iniciais:
+
+- `telemetry.updated` — leitura persistida e estado atualizado da sala.
+- `alert.created` — novo alerta criado para uma sala.
+- `alert.updated` — reconhecimento ou remoção de alerta.
+- `device.status.changed` — conectividade ou falha de dispositivo alterada.
+- `system.snapshot` — ressincronização completa após reconexão.
+
+Envelope mínimo:
+
+```json
+{
+  "eventId": "evt-uuid",
+  "version": 42,
+  "occurredAt": "2026-08-31T12:00:00.000Z",
+  "data": {
+    "roomId": "sala-1",
+    "temperature": 22.6,
+    "humidity": 51,
+    "co2": 720,
+    "source": "MQTT"
+  }
+}
+```
+
+O cliente ignora eventos duplicados ou com versão anterior. Ao reconectar, a dashboard
+solicita novo snapshot REST e histórico; o WebSocket continua sendo o canal de atualização
+sem polling como caminho principal.
 
 ---
 
