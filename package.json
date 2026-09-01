@@ -27,6 +27,7 @@
     "build:config": "npm --workspace @hvac/config run build",
     "build:front": "npm --workspace @hvac/web run build",
     "build:api": "npm --workspace @hvac/api run build",
+    "ci": "npm run cutover:verify-data && npm run test && npm run build",
     "preview": "npm --workspace @hvac/web run preview",
     "test": "npm run test:shared && npm run test:api && npm run test:front",
     "test:shared": "npm run test:contracts && npm run test:domain && npm run test:config",

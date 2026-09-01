@@ -45,7 +45,10 @@ npm run build:front
 npm run build:api
 npm run test:front
 npm run test:api
+npm run ci
 ```
+
+`npm run ci` executa verificacao de cutover, testes completos e build de producao — mesma validacao usada pelo GitHub Actions.
 
 ## Build e deployment
 

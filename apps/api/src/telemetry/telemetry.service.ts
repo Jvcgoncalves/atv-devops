@@ -64,7 +64,7 @@ export class TelemetryService {
       timestamp: updated.ultimaLeitura,
       status: updated.status,
     });
-    this.logger.log(`[WS EVENT] event=${event.name} version=${event.envelope.version} room=${updated.id}`);
+    this.logger.log(`[WS EVENT] event=${event?.name ?? "unknown"} version=${event?.envelope?.version ?? "unknown"} room=${updated.id}`);
     return { ok: true, idLeitura: result.ids[0] };
   }
 
