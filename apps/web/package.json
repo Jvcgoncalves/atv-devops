@@ -1,0 +1,30 @@
+{
+  "name": "@hvac/web",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Dashboard React/Vite do sistema de automacao HVAC",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "node --import tsx --test test/*.test.ts test/*.test.tsx"
+  },
+  "dependencies": {
+    "@hvac/contracts": "1.0.0",
+    "@hvac/domain": "1.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2",
+    "recharts": "^2.12.7",
+    "socket.io-client": "^4.8.3"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "react-test-renderer": "^18.3.1",
+    "supabase": "^2.116.0",
+    "tsx": "^4.23.13",
+    "vite": "^5.4.8"
+  }
+}

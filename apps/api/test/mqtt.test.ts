@@ -1,0 +1,76 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { MqttIngestionService } from "../src/mqtt/mqtt-ingestion.service.js";
+
+const message = (topic, body, messageId = 7) => ({ topic, payload: Buffer.from(JSON.stringify(body)), messageId });
+const settle = () => new Promise((resolve) => setImmediate(resolve));
+
+function createHarness(telemetryIngest) {
+  let listener;
+  const calls = { telemetry: [], vav: [], bathroom: [], realtime: [] };
+  const mqtt = { subscribe: (callback) => { listener = callback; return () => undefined; } };
+  const service = new MqttIngestionService(
+    mqtt,
+    { ingest: telemetryIngest ?? (async (...args) => calls.telemetry.push(args)) },
+    { ingestVavState: async (...args) => calls.vav.push(args) },
+    { update: async (...args) => calls.bathroom.push(args) },
+    { publish: (...args) => calls.realtime.push(args) },
+  );
+  service.onModuleInit();
+  return { listener, calls };
+}
+
+test("MQTT maps telemetry topic and payload to one ingestion call", async () => {
+  const harness = createHarness();
+  await harness.listener(message("hvac/sala/1/telemetria", { temperatura: 22.5, umidade: 50, co2: 700 }));
+  await settle();
+  assert.deepEqual(harness.calls.telemetry[0], [{ salaId: "sala-1", temperatura: 22.5, umidade: 50, co2: 700 }, "MQTT", "hvac/sala/1/telemetria:7"]);
+});
+
+test("MQTT maps unchanged ESP32 legacy topic to configured default room", async () => {
+  const harness = createHarness();
+  await harness.listener(message("tcc-hvac-kaue/airquality", { temperature: 22.5, humidity: 50, co2: 700 }, 9));
+  await settle();
+
+  assert.deepEqual(harness.calls.telemetry[0], [{ salaId: "sala-1", temperatura: 22.5, umidade: 50, co2: 700 }, "MQTT", "tcc-hvac-kaue/airquality:9"]);
+});
+
+test("MQTT routes VAV, bathroom, status, and malformed messages without cross-routing", async () => {
+  const harness = createHarness();
+  await harness.listener(message("hvac/sala/1/vav", { abertura: 60, estado: "ok" }));
+  await harness.listener(message("hvac/banheiro/1/luz", { luz: true }));
+  await harness.listener(message("hvac/status", { online: false }));
+  await harness.listener({ topic: "hvac/sala/1/telemetria", payload: Buffer.from("bad"), messageId: 8 });
+  await harness.listener(message("hvac/sala/1/other", { temperatura: 22 }, 10));
+  await settle();
+
+  assert.deepEqual(harness.calls.vav, [["sala-1", 60, "ok"]]);
+  assert.deepEqual(harness.calls.bathroom, [["ban-1", true, false]]);
+  assert.deepEqual(harness.calls.realtime, [["device.status.changed", { deviceId: "hvac/status", online: false }]]);
+  assert.equal(harness.calls.telemetry.length, 0);
+});
+
+test("MQTT waits for an older ingestion before starting the next one", async () => {
+  const started = [];
+  let releaseFirst = () => undefined;
+  const firstFinished = new Promise((resolve) => {
+    releaseFirst = () => resolve(undefined);
+  });
+  const harness = createHarness(async (...args) => {
+    started.push(args[0]);
+    if (started.length === 1) await firstFinished;
+  });
+
+  harness.listener(message("hvac/sala/1/telemetria", { temperatura: 20 }, 1));
+  harness.listener(message("hvac/sala/1/telemetria", { temperatura: 30 }, 2));
+  await settle();
+
+  assert.deepEqual(started, [{ salaId: "sala-1", temperatura: 20 }]);
+
+  releaseFirst();
+  await settle();
+  assert.deepEqual(started, [
+    { salaId: "sala-1", temperatura: 20 },
+    { salaId: "sala-1", temperatura: 30 },
+  ]);
+});

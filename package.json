@@ -3,21 +3,53 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Dashboard de supervisao e controle para sistema de automacao HVAC (TCC)",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+  "description": "Monorepo do dashboard de automacao HVAC (TCC)",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.6 <23",
+    "npm": ">=10 <11"
   },
-  "dependencies": {
-    "mqtt": "^5.10.1",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^6.26.2",
-    "recharts": "^2.12.7"
+  "packageManager": "npm@10.9.3",
+  "scripts": {
+    "start": "npm run start:api",
+    "dev": "npm run dev:web",
+    "dev:web": "npm --workspace @hvac/web run dev",
+    "dev:api": "npm --workspace @hvac/api run dev",
+    "start:api": "npm --workspace @hvac/api run start",
+    "cutover:verify-data": "node apps/api/scripts/verify-cutover-data.mjs",
+    "build": "npm run build:shared && npm run build:front && npm run build:api",
+    "build:shared": "npm run build:contracts && npm run build:domain && npm run build:config",
+    "build:contracts": "npm --workspace @hvac/contracts run build",
+    "build:domain": "npm --workspace @hvac/domain run build",
+    "build:config": "npm --workspace @hvac/config run build",
+    "build:front": "npm --workspace @hvac/web run build",
+    "build:api": "npm --workspace @hvac/api run build",
+    "ci": "npm run cutover:verify-data && npm run test && npm run build",
+    "preview": "npm --workspace @hvac/web run preview",
+    "test": "npm run test:shared && npm run test:api && npm run test:front",
+    "test:shared": "npm run test:contracts && npm run test:domain && npm run test:config",
+    "test:shared:coverage": "npm run test:contracts && npm run test:domain:coverage && npm run test:config",
+    "test:contracts": "npm --workspace @hvac/contracts run test",
+    "test:domain": "npm --workspace @hvac/domain run test",
+    "test:domain:coverage": "npm --workspace @hvac/domain run test:coverage",
+    "test:config": "npm --workspace @hvac/config run test",
+    "typecheck:api": "npm --workspace @hvac/api run typecheck",
+    "typecheck:front": "npm --workspace @hvac/web run typecheck",
+    "test:api": "npm --workspace @hvac/api run test",
+    "test:api:unit": "npm --workspace @hvac/api run test:unit",
+    "test:api:integration": "npm --workspace @hvac/api run test:integration",
+    "test:api:e2e": "npm --workspace @hvac/api run test:e2e",
+    "test:api:mqtt": "npm --workspace @hvac/api run test:mqtt",
+    "test:api:websocket": "npm --workspace @hvac/api run test:websocket",
+    "test:front": "npm --workspace @hvac/web run test"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^4.3.1",
-    "vite": "^5.4.8"
+    "@types/node": "^26.4.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "typescript": "^5.7.2"
   }
 }

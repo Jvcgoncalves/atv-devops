@@ -1,0 +1,15 @@
+{
+  "name": "@hvac/contracts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Contratos compartilhados do sistema HVAC",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p ../../tsconfig.json --noEmit",
+    "test": "npm run build",
+    "test:coverage": "npm run build"
+  }
+}
