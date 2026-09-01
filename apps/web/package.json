@@ -6,6 +6,7 @@
   "description": "Dashboard React/Vite do sistema de automacao HVAC",
   "scripts": {
     "dev": "vite",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.json --noEmit && vite build",
     "preview": "vite preview",
     "test": "node --import tsx --test test/*.test.ts test/*.test.tsx"

@@ -9,6 +9,7 @@ import { HealthModule } from "./health/health.module.js";
 import { MqttIngestionModule } from "./mqtt/mqtt-ingestion.module.js";
 import { MqttModule } from "./mqtt/mqtt.module.js";
 import { NotificationsModule } from "./notifications/notifications.module.js";
+import { OperationsModule } from "./operations/operations.module.js";
 import { RealtimeModule } from "./realtime/realtime.module.js";
 import { RoomsModule } from "./rooms/rooms.module.js";
 import { StateModule } from "./state/state.module.js";
@@ -23,6 +24,7 @@ import { ThresholdsModule } from "./thresholds/thresholds.module.js";
     RealtimeModule,
     AuditModule,
     NotificationsModule,
+    OperationsModule,
     AlertsModule,
     TelemetryModule,
     RoomsModule,

@@ -47,6 +47,43 @@ npm run test:front
 npm run test:api
 ```
 
+## Build e deployment
+
+O entrypoint de deployment é NestJS. Execute na raiz:
+
+```bash
+npm ci
+npm run build
+npm start
+```
+
+Configure API em ambiente server-only (`apps/api/.env` local ou secrets do provedor):
+
+```dotenv
+NODE_ENV=production
+PORT=3001
+CORS_ORIGINS=https://dashboard.example.com
+SUPABASE_URL=https://<PROJECT_REF>.supabase.co
+SUPABASE_SECRET_KEY=sb_secret_<SERVER_ONLY_VALUE>
+MQTT_ENABLED=true
+MQTT_URL=mqtts://<BROKER_HOST>:8883
+MQTT_TOPIC=hvac/sala/+/telemetria
+MQTT_DEFAULT_ROOM_ID=sala-1
+REALTIME_ALLOWED_ORIGINS=https://dashboard.example.com
+REALTIME_AUTH_TOKEN=<SERVER_ONLY_VALUE>
+```
+
+Configure front para API real:
+
+```dotenv
+VITE_API_MODE=real
+VITE_API_BASE=/api
+```
+
+Nunca coloque credenciais Supabase/MQTT/ntfy ou tokens server-only em variáveis `VITE_*`.
+Use `GET /api/health` para liveness e `GET /api/health/ready` para readiness de Supabase
+e MQTT. Métricas operacionais ficam em `GET /api/health/metrics`.
+
 ## Conectar ao backend real
 
 1. Aplique a migration Supabase e suba a API Nest conforme [`apps/api/README.md`](apps/api/README.md).

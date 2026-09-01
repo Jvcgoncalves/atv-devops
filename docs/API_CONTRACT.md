@@ -21,7 +21,7 @@ A dashboard usa REST para snapshot inicial, comandos, configuração e históric
 WebSocket para atualizações ao vivo enviadas pelo backend.
 
 Supabase Postgres é fonte de verdade. NestJS é único dono da persistência e da ingestão
-MQTT; o SQLite legado está congelado e não faz parte do deployment.
+MQTT; SQLite não faz parte do código ou deployment final.
 
 > A dashboard React já implementa este contrato. No modo `mock` ela usa um simulador
 > interno (`apps/web/src/api/mockBackend.ts`) com exatamente os mesmos formatos abaixo, então ao
@@ -125,6 +125,9 @@ Base URL: `/api` (configurável via `VITE_API_BASE`).
 | GET | `/api/ntfy/log` | Histórico de notificações enviadas | RF17 |
 | GET | `/api/eventos` | Log de auditoria (rastreabilidade) | RNF07 |
 | GET / PUT | `/api/identificacao` | Dados do EAS e responsável técnico (cabeçalho do relatório) | RNF07 |
+| GET | `/api/health` | Liveness da API | Operação |
+| GET | `/api/health/ready` | Readiness da API, Supabase e MQTT | Operação |
+| GET | `/api/health/metrics` | Contadores operacionais sem segredos | Operação |
 
 ### Exemplo — `GET /api/estado`
 ```json
@@ -178,6 +181,21 @@ Envelope mínimo:
 O cliente ignora eventos duplicados ou com versão anterior. Ao reconectar, a dashboard
 solicita novo snapshot REST e histórico; o WebSocket continua sendo o canal de atualização
 sem polling como caminho principal.
+
+### 2.2 Saúde e observabilidade operacional
+
+`GET /api/health` é liveness: confirma que processo Nest responde e preserva resposta
+compatível `{ "ok": true, "ts": "..." }`.
+
+`GET /api/health/ready` verifica conexão Supabase e estado MQTT. Retorna `200` quando
+dependências estão prontas, ou `503` quando banco/MQTT requerido está indisponível. MQTT
+desabilitado explicitamente (`MQTT_ENABLED=false`) aparece como `disabled`, não como falha.
+
+`GET /api/health/metrics` expõe contadores em memória para operação: telemetria recebida,
+persistida, duplicada e rejeitada; alertas criados e falhos; mensagens, erros e reconexões
+MQTT; erros de banco e último horário/mensagem de cada erro. Nenhum segredo é retornado.
+Contadores reiniciam a cada deploy; logs estruturados devem ser enviados pelo ambiente de
+execução para retenção e alertas.
 
 ---
 
@@ -289,46 +307,41 @@ Tabelas persistidas: `climatizers`, `rooms`, `vavs`, `sensors`, `bathrooms`,
 `audit_events` e `identification`. Colunas usam `snake_case` no Postgres e são mapeadas
 para os nomes do contrato REST. RLS está habilitado nas tabelas públicas.
 
-### Schema SQLite legado (somente referência de rollback)
+### 6.1 Comandos finais e ambiente
 
-```sql
-CREATE TABLE leituras (
-  id        INTEGER PRIMARY KEY AUTOINCREMENT,
-  sala_id   TEXT NOT NULL,
-  temperatura REAL,
-  umidade   REAL,
-  co2       REAL,
-  ts        TEXT NOT NULL          -- ISO 8601
-);
-CREATE INDEX idx_leituras_sala_ts ON leituras (sala_id, ts);
+Na raiz do monorepo:
 
-CREATE TABLE alertas (
-  id          TEXT PRIMARY KEY,
-  level       TEXT NOT NULL,
-  tipo        TEXT NOT NULL,
-  mensagem    TEXT NOT NULL,
-  sala_id     TEXT,
-  ts          TEXT NOT NULL,
-  reconhecido INTEGER DEFAULT 0
-);
-
-CREATE TABLE parametros (        -- uma linha por sala
-  sala_id  TEXT PRIMARY KEY,
-  temp_min REAL, temp_max REAL,
-  umi_min  REAL, umi_max  REAL,
-  co2_warn REAL, co2_critical REAL
-);
-
-CREATE TABLE eventos (           -- log de auditoria / rastreabilidade (RNF07)
-  id        INTEGER PRIMARY KEY AUTOINCREMENT,
-  categoria TEXT NOT NULL,       -- alerta|reconhecimento|parametro|setpoint|vav|climatizador|exaustao|registro
-  descricao TEXT NOT NULL,
-  sala_id   TEXT,
-  origem    TEXT,                -- sistema | operador
-  ts        TEXT NOT NULL
-);
-CREATE INDEX idx_eventos_ts ON eventos (ts);
+```bash
+npm ci
+npm run build
+npm start
 ```
+
+`npm start` executa `apps/api/src/main.ts`. API usa somente variáveis server-only:
+
+```dotenv
+NODE_ENV=production
+PORT=3001
+CORS_ORIGINS=https://dashboard.example.com
+SUPABASE_URL=https://<PROJECT_REF>.supabase.co
+SUPABASE_SECRET_KEY=sb_secret_<SERVER_ONLY_VALUE>
+MQTT_ENABLED=true
+MQTT_URL=mqtts://<BROKER_HOST>:8883
+MQTT_TOPIC=hvac/sala/+/telemetria
+MQTT_DEFAULT_ROOM_ID=sala-1
+REALTIME_ALLOWED_ORIGINS=https://dashboard.example.com
+REALTIME_AUTH_TOKEN=<SERVER_ONLY_VALUE>
+```
+
+Front usa:
+
+```dotenv
+VITE_API_MODE=real
+VITE_API_BASE=/api
+```
+
+Nenhuma variável `SUPABASE_*`, credencial MQTT, token ntfy ou token server-only pode ter
+prefixo `VITE_`.
 
 ### Rastreabilidade e base legal (por que registrar)
 
@@ -378,4 +391,4 @@ inclui um cabeçalho de identificação além das linhas de eventos:
 | RF17 ntfy.sh | seção 5 |
 | RF18 BACnet | *(o levantamento cita BACnet; este projeto adota MQTT conforme decisão do aluno — registrar a troca no TCC)* |
 | RNF06 faixas configuráveis | `/api/parametros` + tela Parâmetros |
-| RNF07 logs | tabelas `eventos`/`leituras` |
+| RNF07 logs | tabelas `audit_events`/`sensor_readings` + `GET /api/eventos` |

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 const script = fileURLToPath(new URL("../scripts/verify-cutover-data.mjs", import.meta.url));
-const databaseModule = fileURLToPath(new URL("../db.ts", import.meta.url));
+const apiPackage = fileURLToPath(new URL("../package.json", import.meta.url));
 
 function run(databasePath) {
   return spawnSync(process.execPath, [script], {
@@ -40,15 +40,13 @@ test("cutover data check blocks when SQLite artifact exists", () => {
   }
 });
 
-test("legacy SQLite connection is configured read-only by default", () => {
-  const legacyDb = readFileSync(databaseModule, "utf8");
-  assert.match(legacyDb, /fileMustExist: !writesEnabled/);
-  assert.match(legacyDb, /readonly: !writesEnabled/);
-  assert.match(legacyDb, /query_only = ON/);
-  assert.match(legacyDb, /process\.env\.SQLITE_WRITE_MODE === SQLITE_WRITE_MODE/);
-});
+test("cutover removes legacy runtime and dependencies", () => {
+  for (const file of ["db.ts", "logic.ts", "schema.sql", "server.ts", "types.ts"]) {
+    assert.equal(existsSync(fileURLToPath(new URL(`../${file}`, import.meta.url))), false, file);
+  }
 
-test("legacy server has no mutating routes", () => {
-  const legacyServer = readFileSync(fileURLToPath(new URL("../server.ts", import.meta.url)), "utf8");
-  assert.doesNotMatch(legacyServer, /app\.(post|put|patch|delete)\(/);
+  const packageJson = JSON.parse(readFileSync(apiPackage, "utf8"));
+  assert.equal(packageJson.scripts["legacy:start:read-only"], undefined);
+  assert.equal(packageJson.dependencies["better-sqlite3"], undefined);
+  assert.equal(packageJson.dependencies.express, undefined);
 });

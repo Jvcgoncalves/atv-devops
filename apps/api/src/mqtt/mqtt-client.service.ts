@@ -1,7 +1,8 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger, Optional } from "@nestjs/common";
 import mqtt from "mqtt";
 import type { MqttClient } from "mqtt";
 import type { MqttMessageListener } from "./mqtt.types.js";
+import { OperationsService } from "../operations/operations.service.js";
 
 @Injectable()
 export class MqttClientService {
@@ -9,6 +10,8 @@ export class MqttClientService {
   private client: MqttClient | null = null;
   private connected = false;
   private readonly listeners = new Set<MqttMessageListener>();
+
+  constructor(@Optional() @Inject(OperationsService) private readonly operations?: OperationsService) {}
 
   onModuleInit(): void {
     if (process.env.MQTT_ENABLED === "false") return;
@@ -25,15 +28,29 @@ export class MqttClientService {
     });
     this.client.on("connect", () => {
       this.connected = true;
+      this.operations?.recordMqttConnected();
       this.logger.log(`MQTT connected; subscribing ${topics.join(", ")}`);
       this.client?.subscribe(topics, (error) => {
-        if (error) this.logger.error(`MQTT subscribe failed: ${error.message}`);
+        if (error) {
+          this.operations?.recordMqttError(error);
+          this.logger.error(`MQTT subscribe failed: ${error.message}`);
+        }
       });
     });
-    this.client.on("close", () => { this.connected = false; });
-    this.client.on("offline", () => { this.connected = false; });
-    this.client.on("error", (error) => this.logger.error(`MQTT error: ${error.message}`));
+    this.client.on("close", () => {
+      this.connected = false;
+      this.operations?.recordMqttDisconnected();
+    });
+    this.client.on("offline", () => {
+      this.connected = false;
+      this.operations?.recordMqttDisconnected();
+    });
+    this.client.on("error", (error) => {
+      this.operations?.recordMqttError(error);
+      this.logger.error(`MQTT error: ${error.message}`);
+    });
     this.client.on("message", (topicName, payload, packet) => {
+      this.operations?.recordMqttMessage();
       for (const listener of this.listeners) listener({ topic: topicName, payload, messageId: packet.messageId });
     });
   }

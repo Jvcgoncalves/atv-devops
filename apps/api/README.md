@@ -21,8 +21,8 @@ Informe `SUPABASE_URL` e chave server-only (`SUPABASE_SECRET_KEY` ou
 usa prefixo REST `/api` e Socket.IO no namespace `/realtime`.
 
 Para desenvolvimento local, aplique migrations e seed com `supabase db reset`. Para
-deployment, use `npm ci && npm run build && npm start`; `npm start` executa Nest, não o
-servidor Express legado.
+deployment, use `npm ci && npm run build && npm start`; `npm start` executa o entrypoint
+Nest `src/main.ts`.
 
 ## Modelo de dados
 
@@ -42,11 +42,12 @@ Schema canônico em `supabase/migrations/` usa tabelas snake_case: `climatizers`
 - `GET/PUT /api/ntfy`, `GET /api/ntfy/log`
 - `GET/PUT /api/identificacao`, `GET /api/eventos`
 - `POST /api/telemetria`, `POST /api/vav/estado`, `POST /api/banheiro/luz`
-- `GET /api/health`
+- `GET /api/health` (liveness)
+- `GET /api/health/ready` (Supabase/MQTT readiness; `503` se dependência requerida falhar)
+- `GET /api/health/metrics` (telemetria, alertas, MQTT e erros de banco)
 
-O SQLite antigo está congelado e só permanece para inspeção durante janela de rollback.
-Veja [`docs/CUTOVER_RUNBOOK.md`](../../docs/CUTOVER_RUNBOOK.md) para decisão de migração
-de dados e configuração de deployment.
+Supabase é única fonte de verdade. Veja [`docs/CUTOVER_RUNBOOK.md`](../../docs/CUTOVER_RUNBOOK.md)
+para configuração de deployment, smoke checks, observabilidade e rollback.
 
 ## Fluxo com ESP32
 

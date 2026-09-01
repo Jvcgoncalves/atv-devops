@@ -102,7 +102,7 @@ Ordenadas por prioridade normativa. Nenhuma delas está implementada hoje.
 6. **Ruído** (biotério) — parâmetro citado pelo CONCEA; monitoramento opcional. **Impacto: baixo.**
 7. **Política de retenção dos registros** — definir prazo de guarda dos logs/leituras compatível
    com o PMOC do EAS/instituição. Hoje o mock mantém os últimos registros em memória; o backend
-   real deve persistir (SQLite/BD) com retenção definida. **Impacto: médio (documental).**
+   real persiste no Supabase, mas ainda falta formalizar prazo de retenção. **Impacto: médio (documental).**
 
 ---
 

@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, Optional } from "@nestjs/common";
 import type { Metric, TelemetryInput, TelemetryResponse, TelemetrySource } from "@hvac/contracts";
 import { normalizeTelemetryPayload } from "@hvac/domain";
 import { AlertsService } from "../alerts/alerts.service.js";
@@ -7,6 +7,7 @@ import { HvacRepository } from "../database/hvac.repository.js";
 import { mapHistory, mapThresholdRows } from "../mappers/response-mappers.js";
 import { RealtimeService } from "../realtime/realtime.service.js";
 import { StateService } from "../state/state.service.js";
+import { OperationsService } from "../operations/operations.service.js";
 
 @Injectable()
 export class TelemetryService {
@@ -18,11 +19,13 @@ export class TelemetryService {
     @Inject(AlertsService) private readonly alerts: AlertsService,
     @Inject(AuditService) private readonly audit: AuditService,
     @Inject(RealtimeService) private readonly realtime: RealtimeService,
+    @Optional() @Inject(OperationsService) private readonly operations?: OperationsService,
   ) {}
 
   async ingest(input: TelemetryInput, source: TelemetrySource = "REST", sourceMessageId?: string): Promise<TelemetryResponse> {
     const normalized = normalizeTelemetryPayload(input);
-    if (!normalized) throw new BadRequestException("telemetria invalida");
+    if (!normalized) return this.reject("telemetria invalida");
+    this.operations?.recordTelemetryReceived();
     const room = await this.state.getRoom(normalized.salaId);
     const values = this.validateValues(normalized);
     const sensors = await this.repository.listSensors(room.id);
@@ -38,7 +41,11 @@ export class TelemetryService {
       quality: "good",
       sourceMessageId,
     });
-    if (result.duplicate) return { ok: true, idLeitura: result.ids[0] };
+    if (result.duplicate) {
+      this.operations?.recordTelemetryDuplicate();
+      return { ok: true, idLeitura: result.ids[0] };
+    }
+    this.operations?.recordTelemetryPersisted(result.ids.length);
 
     const updated = await this.state.getRoom(room.id);
     const thresholdRows = await this.repository.listThresholds(room.id);
@@ -77,14 +84,19 @@ export class TelemetryService {
     for (const metric of ["temperatura", "umidade", "co2"] as Metric[]) {
       const value = input[metric];
       if (value === undefined) continue;
-      if (!Number.isFinite(value)) throw new BadRequestException("valor de telemetria invalido");
-      if (metric === "temperatura" && (value < -50 || value > 80)) throw new BadRequestException("temperatura fora da faixa");
-      if (metric === "umidade" && (value < 0 || value > 100)) throw new BadRequestException("umidade fora da faixa");
-      if (metric === "co2" && (value < 0 || value > 100000)) throw new BadRequestException("co2 fora da faixa");
+      if (!Number.isFinite(value)) return this.reject("valor de telemetria invalido");
+      if (metric === "temperatura" && (value < -50 || value > 80)) return this.reject("temperatura fora da faixa");
+      if (metric === "umidade" && (value < 0 || value > 100)) return this.reject("umidade fora da faixa");
+      if (metric === "co2" && (value < 0 || value > 100000)) return this.reject("co2 fora da faixa");
       values[metric] = value;
     }
-    if (!Object.keys(values).length) throw new BadRequestException("telemetria sem metricas");
+    if (!Object.keys(values).length) return this.reject("telemetria sem metricas");
     return values;
+  }
+
+  private reject(message: string): never {
+    this.operations?.recordTelemetryRejected();
+    throw new BadRequestException(message);
   }
 
   private isMetric(metric: string): metric is Metric {

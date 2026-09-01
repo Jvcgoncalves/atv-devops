@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import type {
   Alert,
@@ -11,6 +11,7 @@ import type {
   RoomThresholds,
   TelemetrySource,
 } from "@hvac/contracts";
+import { OperationsService } from "../operations/operations.service.js";
 import { SupabaseService } from "./supabase.service.js";
 import type {
   AlertRow,
@@ -31,17 +32,20 @@ import type {
 
 @Injectable()
 export class HvacRepository {
-  constructor(@Inject(SupabaseService) private readonly supabase: SupabaseService) {}
+  constructor(
+    @Inject(SupabaseService) private readonly supabase: SupabaseService,
+    @Optional() @Inject(OperationsService) private readonly operations?: OperationsService,
+  ) {}
 
   async listClimatizers(): Promise<ClimatizerRow[]> {
     const { data, error } = await this.supabase.getClient().from("climatizers").select("*").order("id");
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return (data ?? []) as unknown as ClimatizerRow[];
   }
 
   async findClimatizer(id: string): Promise<ClimatizerRow | null> {
     const { data, error } = await this.supabase.getClient().from("climatizers").select("*").eq("id", id).maybeSingle();
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return data as unknown as ClimatizerRow | null;
   }
 
@@ -53,19 +57,19 @@ export class HvacRepository {
       .eq("id", id)
       .select("*")
       .single();
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return data as unknown as ClimatizerRow;
   }
 
   async listRooms(): Promise<RoomRow[]> {
     const { data, error } = await this.supabase.getClient().from("rooms").select("*").order("id");
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return (data ?? []) as unknown as RoomRow[];
   }
 
   async findRoom(id: string): Promise<RoomRow | null> {
     const { data, error } = await this.supabase.getClient().from("rooms").select("*").eq("id", id).maybeSingle();
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return data as unknown as RoomRow | null;
   }
 
@@ -77,19 +81,19 @@ export class HvacRepository {
       .eq("id", id)
       .select("*")
       .single();
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return data as unknown as RoomRow;
   }
 
   async listVavs(): Promise<VavRow[]> {
     const { data, error } = await this.supabase.getClient().from("vavs").select("*").order("id");
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return (data ?? []) as unknown as VavRow[];
   }
 
   async findVavByRoom(roomId: string): Promise<VavRow | null> {
     const { data, error } = await this.supabase.getClient().from("vavs").select("*").eq("room_id", roomId).maybeSingle();
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return data as unknown as VavRow | null;
   }
 
@@ -101,7 +105,7 @@ export class HvacRepository {
       .eq("room_id", roomId)
       .select("*")
       .single();
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return data as unknown as VavRow;
   }
 
@@ -109,7 +113,7 @@ export class HvacRepository {
     let query = this.supabase.getClient().from("sensors").select("*").order("id");
     if (roomId) query = query.eq("room_id", roomId);
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return (data ?? []) as unknown as SensorRow[];
   }
 
@@ -117,7 +121,7 @@ export class HvacRepository {
     let query = this.supabase.getClient().from("alert_thresholds").select("*").order("room_id");
     if (roomId) query = query.eq("room_id", roomId);
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return (data ?? []) as unknown as ThresholdRow[];
   }
 
@@ -144,19 +148,19 @@ export class HvacRepository {
       .from("alert_thresholds")
       .upsert(rows, { onConflict: "room_id,metric" })
       .select("*");
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return (data ?? []) as unknown as ThresholdRow[];
   }
 
   async listBathrooms(): Promise<BathroomRow[]> {
     const { data, error } = await this.supabase.getClient().from("bathrooms").select("*").order("id");
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return (data ?? []) as unknown as BathroomRow[];
   }
 
   async findBathroom(id: string): Promise<BathroomRow | null> {
     const { data, error } = await this.supabase.getClient().from("bathrooms").select("*").eq("id", id).maybeSingle();
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return data as unknown as BathroomRow | null;
   }
 
@@ -168,25 +172,25 @@ export class HvacRepository {
       .eq("id", id)
       .select("*")
       .single();
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return data as unknown as BathroomRow;
   }
 
   async listAlerts(): Promise<AlertRow[]> {
     const { data, error } = await this.supabase.getClient().from("alerts").select("*").order("occurred_at", { ascending: false });
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return (data ?? []) as unknown as AlertRow[];
   }
 
   async findAlert(id: string): Promise<AlertRow | null> {
     const { data, error } = await this.supabase.getClient().from("alerts").select("*").eq("id", id).maybeSingle();
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return data as unknown as AlertRow | null;
   }
 
   async findActiveAlertByKey(key: string): Promise<AlertRow | null> {
     const { data, error } = await this.supabase.getClient().from("alerts").select("*").eq("alert_key", key).is("resolved_at", null).maybeSingle();
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return data as unknown as AlertRow | null;
   }
 
@@ -197,7 +201,7 @@ export class HvacRepository {
       .insert({ id: input.id ?? randomUUID(), ...input })
       .select("*")
       .single();
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return data as unknown as AlertRow;
   }
 
@@ -209,17 +213,17 @@ export class HvacRepository {
       .eq("id", id)
       .select("*")
       .single();
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return data as unknown as AlertRow;
   }
 
   async deleteAcknowledgedAlerts(): Promise<AlertRow[]> {
     const { data: acknowledged, error: readError } = await this.supabase.getClient().from("alerts").select("*").eq("acknowledged", true);
-    if (readError) throw readError;
+    if (readError) this.throwDatabaseError(readError);
     const rows = (acknowledged ?? []) as unknown as AlertRow[];
     if (!rows.length) return [];
     const { error } = await this.supabase.getClient().from("alerts").delete().eq("acknowledged", true);
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return rows;
   }
 
@@ -234,7 +238,7 @@ export class HvacRepository {
       .eq("sensor_id", sensor.id)
       .order("recorded_at", { ascending: false })
       .limit(limit);
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return ((data ?? []) as unknown as ReadingRow[]).reverse();
   }
 
@@ -256,7 +260,7 @@ export class HvacRepository {
           .select("id")
           .eq("source_message_id", sourceMessageId)
           .maybeSingle();
-        if (existingError) throw existingError;
+        if (existingError) this.throwDatabaseError(existingError);
         if (existing) {
           duplicateKeys.add(sourceMessageId);
           duplicateCount += 1;
@@ -293,21 +297,21 @@ export class HvacRepository {
         source_message_id: sourceMessageId,
         recorded_at: input.recordedAt,
       });
-      if (error) throw error;
+      if (error) this.throwDatabaseError(error);
       ids.push(id);
       const { error: sensorError } = await this.supabase
         .getClient()
         .from("sensors")
         .update({ last_seen_at: input.recordedAt, status: "ativo" })
         .eq("id", sensor.id);
-      if (sensorError) throw sensorError;
+      if (sensorError) this.throwDatabaseError(sensorError);
     }
     return { ids, duplicate: false };
   }
 
   async getNtfyConfig(): Promise<NtfyConfigRow | null> {
     const { data, error } = await this.supabase.getClient().from("ntfy_config").select("*").eq("id", "default").maybeSingle();
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return data as unknown as NtfyConfigRow | null;
   }
 
@@ -318,13 +322,13 @@ export class HvacRepository {
       .upsert({ id: "default", ...patch, updated_at: new Date().toISOString() })
       .select("*")
       .single();
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return data as unknown as NtfyConfigRow;
   }
 
   async listNtfyLogs(): Promise<NtfyLogRow[]> {
     const { data, error } = await this.supabase.getClient().from("ntfy_logs").select("*").order("sent_at", { ascending: false });
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return (data ?? []) as unknown as NtfyLogRow[];
   }
 
@@ -335,13 +339,13 @@ export class HvacRepository {
       .insert({ id: input.id ?? randomUUID(), ...input })
       .select("*")
       .single();
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return data as unknown as NtfyLogRow;
   }
 
   async listAuditEvents(): Promise<AuditEventRow[]> {
     const { data, error } = await this.supabase.getClient().from("audit_events").select("*").order("occurred_at", { ascending: false });
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return (data ?? []) as unknown as AuditEventRow[];
   }
 
@@ -364,13 +368,13 @@ export class HvacRepository {
       })
       .select("*")
       .single();
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return data as unknown as AuditEventRow;
   }
 
   async getIdentification(): Promise<IdentificationRow | null> {
     const { data, error } = await this.supabase.getClient().from("identification").select("*").eq("id", "default").maybeSingle();
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return data as unknown as IdentificationRow | null;
   }
 
@@ -381,7 +385,7 @@ export class HvacRepository {
       .upsert({ id: "default", ...patch, updated_at: new Date().toISOString() })
       .select("*")
       .single();
-    if (error) throw error;
+    if (error) this.throwDatabaseError(error);
     return data as unknown as IdentificationRow;
   }
 
@@ -417,5 +421,10 @@ export class HvacRepository {
       responsible_technician: identification.responsavelTecnico,
       professional_registration: identification.registro,
     };
+  }
+
+  private throwDatabaseError(error: unknown): never {
+    this.operations?.recordDatabaseError(error);
+    throw error;
   }
 }

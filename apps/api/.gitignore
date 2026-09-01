@@ -1,5 +1,2 @@
 node_modules
-hvac.db
-hvac.db-wal
-hvac.db-shm
 .env

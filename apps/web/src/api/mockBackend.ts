@@ -104,7 +104,7 @@ const activeAlertKeys = new Set();
 
 // ----- Log de auditoria (rastreabilidade - NBR 7256 / PMOC Lei 13.589/2018) -
 // Registra alertas, acoes do operador, falhas e snapshots ambientais periodicos.
-// No backend real, cada evento e persistido na tabela SQLite `eventos`.
+// No backend real, cada evento e persistido na tabela Supabase `audit_events`.
 let eventos: AuditEvent[] = [];
 let evSeq = 1;
 let booted = false; // evita registrar eventos durante o pre-aquecimento

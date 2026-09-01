@@ -85,3 +85,20 @@ test("HvacRepository returns history oldest-first after bounded newest query", a
   const rows = await repository.listReadings("sala-1", "temperatura");
   assert.deepEqual(rows.map((row) => row.id), ["r-1", "r-2"]);
 });
+
+test("HvacRepository records Supabase errors for operational monitoring", async () => {
+  const failure = new Error("database unavailable");
+  const operations = { recordDatabaseError: (error) => operations.errors.push(error), errors: [] };
+  const repository = new HvacRepository({
+    getClient: () => ({
+      from: () => ({
+        select: () => ({
+          order: () => Promise.resolve({ data: null, error: failure }),
+        }),
+      }),
+    }),
+  }, operations);
+
+  await assert.rejects(() => repository.listRooms(), /database unavailable/);
+  assert.deepEqual(operations.errors, [failure]);
+});

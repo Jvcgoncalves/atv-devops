@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger, Optional } from "@nestjs/common";
 import { mapMqttPayloadToTelemetry, normalizeRoomId } from "@hvac/domain";
 import { BathroomsService } from "../bathrooms/bathrooms.service.js";
 import { RealtimeService } from "../realtime/realtime.service.js";
@@ -6,6 +6,7 @@ import { RoomsService } from "../rooms/rooms.service.js";
 import { TelemetryService } from "../telemetry/telemetry.service.js";
 import { MqttClientService } from "./mqtt-client.service.js";
 import type { MqttMessage } from "./mqtt.types.js";
+import { OperationsService } from "../operations/operations.service.js";
 
 @Injectable()
 export class MqttIngestionService {
@@ -17,6 +18,7 @@ export class MqttIngestionService {
     @Inject(RoomsService) private readonly rooms: RoomsService,
     @Inject(BathroomsService) private readonly bathrooms: BathroomsService,
     @Inject(RealtimeService) private readonly realtime: RealtimeService,
+    @Optional() @Inject(OperationsService) private readonly operations?: OperationsService,
   ) {}
 
   onModuleInit(): void {
@@ -35,7 +37,10 @@ export class MqttIngestionService {
         payload: message.payload,
         defaultRoomId: process.env.MQTT_DEFAULT_ROOM_ID ?? "sala-1",
       });
-      if (!telemetry) return;
+      if (!telemetry) {
+        this.operations?.recordTelemetryRejected();
+        return;
+      }
       const sourceMessageId = message.messageId == null ? undefined : `${message.topic}:${message.messageId}`;
       await this.telemetry.ingest(telemetry, "MQTT", sourceMessageId);
     } catch (error) {

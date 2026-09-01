@@ -35,6 +35,8 @@
     "test:domain": "npm --workspace @hvac/domain run test",
     "test:domain:coverage": "npm --workspace @hvac/domain run test:coverage",
     "test:config": "npm --workspace @hvac/config run test",
+    "typecheck:api": "npm --workspace @hvac/api run typecheck",
+    "typecheck:front": "npm --workspace @hvac/web run typecheck",
     "test:api": "npm --workspace @hvac/api run test",
     "test:api:unit": "npm --workspace @hvac/api run test:unit",
     "test:api:integration": "npm --workspace @hvac/api run test:integration",
@@ -44,9 +46,6 @@
     "test:front": "npm --workspace @hvac/web run test"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^9.6.0",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
     "@types/node": "^26.4.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",

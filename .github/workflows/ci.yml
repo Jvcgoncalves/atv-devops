@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test-api:
+    name: test-api
+    runs-on: ubuntu-latest
+    env:
+      NODE_ENV: test
+      MQTT_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.6.0
+          cache: npm
+      - name: Pin npm
+        run: npm install --global npm@10.9.3
+      - run: npm ci
+      - run: npm run build:shared
+      - run: npm run cutover:verify-data
+      - run: npm run typecheck:api
+      - run: npm run test:api
+      - run: npm run build:api
+
+  test-front:
+    name: test-front
+    runs-on: ubuntu-latest
+    env:
+      VITE_API_MODE: mock
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.6.0
+          cache: npm
+      - name: Pin npm
+        run: npm install --global npm@10.9.3
+      - run: npm ci
+      - run: npm run build:shared
+      - run: npm run typecheck:front
+      - run: npm run test:front
+      - run: npm run build:front

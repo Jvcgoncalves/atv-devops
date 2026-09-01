@@ -5,6 +5,7 @@ import { Test } from "@nestjs/testing";
 import { ValidationPipe } from "@nestjs/common";
 import { AppModule } from "../src/app.module.js";
 import { HvacRepository } from "../src/database/hvac.repository.js";
+import { SupabaseService } from "../src/database/supabase.service.js";
 import { SUPABASE_CLIENT } from "../src/database/database.tokens.js";
 import { MqttClientService } from "../src/mqtt/mqtt-client.service.js";
 import { createFakeRepository } from "./fake-repository.js";
@@ -17,12 +18,14 @@ function createMqttDouble() {
   };
 }
 
-async function startApp() {
+async function startApp(databaseAvailable = true) {
   process.env.MQTT_ENABLED = "false";
   const { repository } = createFakeRepository();
   const module = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(SUPABASE_CLIENT)
     .useValue({})
+    .overrideProvider(SupabaseService)
+    .useValue({ checkConnection: async () => databaseAvailable })
     .overrideProvider(HvacRepository)
     .useValue(repository)
     .overrideProvider(MqttClientService)
@@ -49,6 +52,13 @@ test("Nest HTTP routes preserve client paths, verbs, payload names, and validati
     assert.equal(health.response.status, 200);
     assert.equal(health.body.ok, true);
     assert.ok(Number.isFinite(Date.parse(health.body.ts)));
+
+    const readiness = await request(base, "/api/health/ready");
+    assert.equal(readiness.response.status, 200);
+    assert.deepEqual(readiness.body.checks, { database: "ok", mqtt: "disabled" });
+    const metrics = await request(base, "/api/health/metrics");
+    assert.equal(metrics.response.status, 200);
+    assert.equal(metrics.body.database.errors, 0);
 
     const state = await request(base, "/api/estado");
     assert.equal(state.response.status, 200);
@@ -123,6 +133,18 @@ test("Nest HTTP routes preserve client paths, verbs, payload names, and validati
     assert.equal(invalid.response.status, 400);
     assert.equal(invalid.body.error, "Bad Request");
     assert.ok(invalid.body.message.length > 0);
+  } finally {
+    await app.close();
+  }
+});
+
+test("readiness returns 503 when Supabase is unavailable", async () => {
+  const { app, base } = await startApp(false);
+  try {
+    const readiness = await request(base, "/api/health/ready");
+    assert.equal(readiness.response.status, 503);
+    assert.equal(readiness.body.ok, false);
+    assert.equal(readiness.body.checks.database, "error");
   } finally {
     await app.close();
   }
