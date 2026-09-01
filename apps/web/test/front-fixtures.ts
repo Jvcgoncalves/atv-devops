@@ -24,6 +24,7 @@ export const demoState = {
 export const demoContextValue = {
   state: demoState,
   alerts: [],
+  lastTelemetryEvent: null,
   thresholds: null,
   error: null,
   mode: "mock",

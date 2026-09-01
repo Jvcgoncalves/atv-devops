@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   LineChart,
   Line,
@@ -11,8 +11,9 @@ import {
   ReferenceLine,
 } from "recharts";
 import { api } from "../api/client.ts";
+import { appendRealtimePoint, chartTime } from "../api/telemetry-chart-state.ts";
 import { palette } from "../theme.ts";
-import type { ChartPoint, TelemetryChartProps } from "../types/ui.ts";
+import type { ChartPoint, TelemetryChartProps, TelemetryRealtimeEvent } from "../types/ui.ts";
 import type { Metric } from "@hvac/contracts";
 
 const METRICS: Array<{ key: Metric; label: string }> = [
@@ -23,19 +24,26 @@ const METRICS: Array<{ key: Metric; label: string }> = [
 
 const ROOM_COLORS = [palette.primary, palette.secondary, palette.success, "#8e6fcf"];
 
-export default function TelemetryChart({ salas, thresholds }: TelemetryChartProps) {
+export default function TelemetryChart({ salas, thresholds, lastTelemetryEvent }: TelemetryChartProps) {
   const [metric, setMetric] = useState<Metric>("temperatura");
   const [roomFilter, setRoomFilter] = useState<string>("todas"); // "todas" | salaId
   const [data, setData] = useState<ChartPoint[]>([]);
   const canMeasureContainer = typeof window !== "undefined" && typeof document !== "undefined";
+  const loadedRef = useRef(false);
+  const pendingEventsRef = useRef<TelemetryRealtimeEvent[]>([]);
+  const lastEventVersionRef = useRef(lastTelemetryEvent?.envelope.version ?? 0);
 
   const visiveis = roomFilter === "todas" ? salas : salas.filter((s) => s.id === roomFilter);
+  const visibleRooms = visiveis.map(({ id, nome }) => ({ id, nome }));
+  const visibleRoomIds = visibleRooms.map((room) => room.id).join("|");
 
   useEffect(() => {
     let active = true;
+    loadedRef.current = false;
+    pendingEventsRef.current = [];
+
     async function load() {
-      const series = await Promise.all(visiveis.map((s) => api.getHistory(s.id, metric)));
-      if (!active) return;
+      const series = await Promise.all(visibleRooms.map((s) => api.getHistory(s.id, metric)));
       const len = Math.max(0, ...series.map((s) => s.length));
       const merged: ChartPoint[] = [];
       for (let i = 0; i < len; i++) {
@@ -44,20 +52,43 @@ export default function TelemetryChart({ salas, thresholds }: TelemetryChartProp
             ? new Date(series[0][i].t).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
             : i,
         };
-        visiveis.forEach((s, idx) => {
+        visibleRooms.forEach((s, idx) => {
           point[s.nome] = series[idx]?.[i]?.value ?? null;
         });
         merged.push(point);
       }
-      setData(merged);
+
+      const withPendingEvents = pendingEventsRef.current.reduce((points, event) => {
+        const room = visibleRooms.find((item) => item.id === event.envelope.data.roomId);
+        return room ? appendRealtimePoint(points, event, room.nome, metric) : points;
+      }, merged);
+
+      if (!active) return;
+      setData(withPendingEvents);
+      loadedRef.current = true;
     }
-    load();
-    const id = setInterval(load, 3000);
+    void load();
+
     return () => {
       active = false;
-      clearInterval(id);
     };
-  }, [metric, roomFilter, salas]);
+  }, [metric, visibleRoomIds]);
+
+  useEffect(() => {
+    if (!lastTelemetryEvent) return;
+    const version = lastTelemetryEvent.envelope.version;
+    if (version <= lastEventVersionRef.current) return;
+    lastEventVersionRef.current = version;
+
+    const room = visibleRooms.find((item) => item.id === lastTelemetryEvent.envelope.data.roomId);
+    if (!room) return;
+    if (!loadedRef.current) {
+      pendingEventsRef.current.push(lastTelemetryEvent);
+      return;
+    }
+
+    setData((points) => appendRealtimePoint(points, lastTelemetryEvent, room.nome, metric));
+  }, [lastTelemetryEvent, metric, visibleRoomIds]);
 
   // Linhas de limite so aparecem quando uma unica sala esta selecionada
   // (cada sala tem suas proprias faixas).

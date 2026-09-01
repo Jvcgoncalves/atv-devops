@@ -18,7 +18,7 @@ function Stat({ label, value, color }: { label: string; value: string | number; 
 }
 
 export default function DashboardPage() {
-  const { state, alerts, thresholds, error } = useSystem();
+  const { state, alerts, thresholds, lastTelemetryEvent, error } = useSystem();
 
   if (error && !state) {
     return <div className="banner">Falha ao conectar com a API: {error}</div>;
@@ -79,7 +79,7 @@ export default function DashboardPage() {
 
       <div className="section-title">Telemetria e Exaustao</div>
       <div className="grid grid--2">
-        <TelemetryChart salas={salas} thresholds={thresholds} />
+        <TelemetryChart salas={salas} thresholds={thresholds} lastTelemetryEvent={lastTelemetryEvent} />
         <BathroomExhaust banheiros={state.banheiros} exaustao={state.exaustao} />
       </div>
     </>

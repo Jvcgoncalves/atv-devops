@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable, Optional } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, Logger, Optional } from "@nestjs/common";
 import type { Metric, TelemetryInput, TelemetryResponse, TelemetrySource } from "@hvac/contracts";
 import { normalizeTelemetryPayload } from "@hvac/domain";
 import { AlertsService } from "../alerts/alerts.service.js";
@@ -12,6 +12,7 @@ import { OperationsService } from "../operations/operations.service.js";
 @Injectable()
 export class TelemetryService {
   private externalRoom: string | null = null;
+  private readonly logger = new Logger(TelemetryService.name);
 
   constructor(
     @Inject(HvacRepository) private readonly repository: HvacRepository,
@@ -43,16 +44,18 @@ export class TelemetryService {
     });
     if (result.duplicate) {
       this.operations?.recordTelemetryDuplicate();
+      this.logger.warn(`[TELEMETRY] duplicate room=${room.id} source=${source}`);
       return { ok: true, idLeitura: result.ids[0] };
     }
     this.operations?.recordTelemetryPersisted(result.ids.length);
+    this.logger.log(`[TELEMETRY] persisted room=${room.id} readings=${result.ids.length} source=${source}`);
 
     const updated = await this.state.getRoom(room.id);
     const thresholdRows = await this.repository.listThresholds(room.id);
     const thresholds = mapThresholdRows(thresholdRows)[room.id];
     if (thresholds) await this.alerts.evaluateRoom(updated, thresholds);
     await this.audit.record("registro", `Telemetria recebida para ${updated.nome} (${source})`, room.id, source === "MQTT" || source === "ESP32" ? "dispositivo" : "sistema");
-    this.realtime.publish("telemetry.updated", {
+    const event = this.realtime.publish("telemetry.updated", {
       roomId: updated.id,
       temperature: updated.temperatura,
       humidity: updated.umidade,
@@ -61,6 +64,7 @@ export class TelemetryService {
       timestamp: updated.ultimaLeitura,
       status: updated.status,
     });
+    this.logger.log(`[WS EVENT] event=${event.name} version=${event.envelope.version} room=${updated.id}`);
     return { ok: true, idLeitura: result.ids[0] };
   }
 

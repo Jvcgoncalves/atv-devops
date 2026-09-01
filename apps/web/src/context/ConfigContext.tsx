@@ -2,9 +2,9 @@ import { createContext, useContext, useEffect, useState, useCallback, useRef } f
 import { api } from "../api/client.ts";
 import { createRealtimeClient } from "../api/realtime.ts";
 import { applyRealtimeEvent } from "../api/realtime-state.ts";
-import type { ConfigContextValue, LiveConfig, LiveStatus, RealtimeClient, RealtimeUiState } from "../types/ui.ts";
+import type { ConfigContextValue, LiveConfig, LiveStatus, RealtimeClient, RealtimeUiState, TelemetryRealtimeEvent } from "../types/ui.ts";
 import type { ReactNode } from "react";
-import type { Alert, RoomThresholds, SetClimatizerRequest, SystemState, ThresholdsMap, VavMode } from "@hvac/contracts";
+import type { Alert, Bathroom, Climatizer, ExhaustState, Room, RoomThresholds, SetClimatizerRequest, SystemState, ThresholdsMap, VavMode } from "@hvac/contracts";
 
 export const ConfigContext = createContext<ConfigContextValue | null>(null);
 
@@ -15,6 +15,7 @@ const REALTIME_EVENT = "telemetry.updated";
 export function ConfigProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<SystemState | null>(null); // estado completo do sistema
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [lastTelemetryEvent, setLastTelemetryEvent] = useState<TelemetryRealtimeEvent | null>(null);
   const [thresholds, setThresholds] = useState<ThresholdsMap | null>(null);
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
@@ -34,6 +35,34 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     setState(nextState);
     setAlerts(nextAlerts);
   }, []);
+
+  const commitStateUpdate = useCallback((update: (current: SystemState) => SystemState) => {
+    const current = realtimeStateRef.current.state;
+    if (!current) return;
+    const next = update(current);
+    realtimeStateRef.current = { ...realtimeStateRef.current, state: next };
+    setState(next);
+  }, []);
+
+  const commitRoom = useCallback((room: Room | undefined) => {
+    if (!room) return;
+    commitStateUpdate((current) => ({
+      ...current,
+      salas: current.salas.map((item) => item.id === room.id ? room : item),
+    }));
+  }, [commitStateUpdate]);
+
+  const commitClimatizer = useCallback((climatizer: Climatizer | undefined) => {
+    if (!climatizer) return;
+    commitStateUpdate((current) => ({
+      ...current,
+      climatizadores: current.climatizadores.map((item) => item.id === climatizer.id ? climatizer : item),
+    }));
+  }, [commitStateUpdate]);
+
+  const commitBathroomState = useCallback((next: { banheiros: Bathroom[]; exaustao: ExhaustState }) => {
+    commitStateUpdate((current) => ({ ...current, banheiros: next.banheiros, exaustao: next.exaustao }));
+  }, [commitStateUpdate]);
 
   const refresh = useCallback(async () => {
     try {
@@ -92,11 +121,11 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
       realtimeStateRef.current = next;
       setState(next.state);
       setAlerts(next.alerts);
+      if (event.name === "telemetry.updated") setLastTelemetryEvent(event as TelemetryRealtimeEvent);
       setLiveStatus((live) => ({ ...live, lastData: next.liveData, lastTs: next.liveTs }));
     });
     const unsubscribeConnection = client.subscribeConnection((connection) => {
       setLiveStatus((live) => ({ ...live, connected: connection.connected, connecting: connection.connecting, error: connection.error, url: connection.url, topic: REALTIME_EVENT }));
-      if (connection.connected) void refresh();
     });
     return () => {
       unsubscribeEvents();
@@ -130,32 +159,31 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     async saveThresholds(salaId: string, next: RoomThresholds) {
       const saved = await api.saveThresholds(salaId, next);
       setThresholds(saved);
-      refresh();
       return saved;
     },
     async setVav(roomId: string, abertura: number) {
-      await api.setVav(roomId, abertura);
-      refresh();
+      const updated = await api.setVav(roomId, abertura) as Room | undefined;
+      commitRoom(updated);
     },
     async setVavMode(roomId: string, modo: VavMode) {
-      await api.setVavMode(roomId, modo);
-      refresh();
+      const updated = await api.setVavMode(roomId, modo) as Room | undefined;
+      commitRoom(updated);
     },
     async setRoomSetpoint(roomId: string, setpoint: number) {
-      await api.setRoomSetpoint(roomId, setpoint);
-      refresh();
+      const updated = await api.setRoomSetpoint(roomId, setpoint) as Room | undefined;
+      commitRoom(updated);
     },
     async setVavFault(roomId: string, falha: boolean) {
-      await api.setVavFault(roomId, falha);
-      refresh();
+      const updated = await api.setVavFault(roomId, falha) as Room | undefined;
+      commitRoom(updated);
     },
     async setClimatizador(id: string, patch: SetClimatizerRequest) {
-      await api.setClimatizador(id, patch);
-      refresh();
+      const updated = await api.setClimatizador(id, patch) as Climatizer | undefined;
+      commitClimatizer(updated);
     },
     async setBathroomLight(id: string, luz: boolean) {
-      await api.setBathroomLight(id, luz);
-      refresh();
+      const updated = await api.setBathroomLight(id, luz) as { banheiros: Bathroom[]; exaustao: ExhaustState };
+      commitBathroomState(updated);
     },
     async acknowledgeAlert(id: string) {
       const next = await api.acknowledgeAlert(id);
@@ -171,7 +199,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
 
   return (
     <ConfigContext.Provider
-      value={{ state, alerts, thresholds, error, mode: api.mode, refresh, liveConfig, liveStatus, setLiveConfig, ...actions }}
+      value={{ state, alerts, lastTelemetryEvent, thresholds, error, mode: api.mode, refresh, liveConfig, liveStatus, setLiveConfig, ...actions }}
     >
       {children}
     </ConfigContext.Provider>

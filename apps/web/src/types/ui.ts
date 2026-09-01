@@ -26,6 +26,7 @@ import type {
 export type ApiMode = "mock" | "real";
 export type HistoryMetric = Metric;
 export type RoomStatus = Record<Metric, Status>;
+export type TelemetryRealtimeEvent = RealtimeEvent<"telemetry.updated">;
 
 export interface SimulatedRoom extends Omit<Room, "status" | "fonte"> {
   fonte?: "MOCK" | "ESP32";
@@ -140,6 +141,7 @@ export interface ConfigActions {
 export interface ConfigContextValue extends ConfigActions {
   state: SystemState | null;
   alerts: Alert[];
+  lastTelemetryEvent: TelemetryRealtimeEvent | null;
   thresholds: ThresholdsMap | null;
   error: string | null;
   mode: ApiMode;
@@ -198,6 +200,7 @@ export interface BathroomExhaustProps {
 export interface TelemetryChartProps {
   salas: Room[];
   thresholds: ThresholdsMap | null;
+  lastTelemetryEvent: TelemetryRealtimeEvent | null;
 }
 
 export interface ChartPoint {

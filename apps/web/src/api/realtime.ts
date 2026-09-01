@@ -25,22 +25,26 @@ export function createRealtimeClient(): RealtimeClient {
     connection.connected = true;
     connection.connecting = false;
     connection.error = null;
+    console.info(`[WS CONNECT] id=${socket.id} url=${REALTIME_URL}`);
     emitConnection();
   });
   socket.on("disconnect", () => {
     connection.connected = false;
     connection.connecting = true;
+    console.warn(`[WS DISCONNECT] url=${REALTIME_URL}`);
     emitConnection();
   });
   socket.on("connect_error", (error: Error) => {
     connection.connected = false;
     connection.connecting = false;
     connection.error = error.message;
+    console.error(`[WS ERROR] url=${REALTIME_URL} message=${error.message}`);
     emitConnection();
   });
 
   for (const name of EVENT_NAMES) {
     socket.on(name, (envelope: unknown) => {
+      console.log("[WS IN]", name, envelope);
       if (!envelope || typeof envelope !== "object") return;
       listeners.forEach((listener) => listener({ name, envelope } as RealtimeEvent));
     });

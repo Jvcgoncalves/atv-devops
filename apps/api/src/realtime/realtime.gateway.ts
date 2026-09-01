@@ -22,6 +22,10 @@ export class RealtimeGateway implements OnGatewayConnection {
 
   onModuleInit(): void {
     this.realtime.subscribe((event) => {
+      this.logger.log(
+        `[WS OUT] event=${event.name} version=${event.envelope.version}`,
+      );
+
       this.server?.emit(event.name, event.envelope);
     });
   }

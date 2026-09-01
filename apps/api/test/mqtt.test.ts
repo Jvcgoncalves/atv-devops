@@ -5,13 +5,13 @@ import { MqttIngestionService } from "../src/mqtt/mqtt-ingestion.service.js";
 const message = (topic, body, messageId = 7) => ({ topic, payload: Buffer.from(JSON.stringify(body)), messageId });
 const settle = () => new Promise((resolve) => setImmediate(resolve));
 
-function createHarness() {
+function createHarness(telemetryIngest) {
   let listener;
   const calls = { telemetry: [], vav: [], bathroom: [], realtime: [] };
   const mqtt = { subscribe: (callback) => { listener = callback; return () => undefined; } };
   const service = new MqttIngestionService(
     mqtt,
-    { ingest: async (...args) => calls.telemetry.push(args) },
+    { ingest: telemetryIngest ?? (async (...args) => calls.telemetry.push(args)) },
     { ingestVavState: async (...args) => calls.vav.push(args) },
     { update: async (...args) => calls.bathroom.push(args) },
     { publish: (...args) => calls.realtime.push(args) },
@@ -48,4 +48,29 @@ test("MQTT routes VAV, bathroom, status, and malformed messages without cross-ro
   assert.deepEqual(harness.calls.bathroom, [["ban-1", true, false]]);
   assert.deepEqual(harness.calls.realtime, [["device.status.changed", { deviceId: "hvac/status", online: false }]]);
   assert.equal(harness.calls.telemetry.length, 0);
+});
+
+test("MQTT waits for an older ingestion before starting the next one", async () => {
+  const started = [];
+  let releaseFirst = () => undefined;
+  const firstFinished = new Promise((resolve) => {
+    releaseFirst = () => resolve(undefined);
+  });
+  const harness = createHarness(async (...args) => {
+    started.push(args[0]);
+    if (started.length === 1) await firstFinished;
+  });
+
+  harness.listener(message("hvac/sala/1/telemetria", { temperatura: 20 }, 1));
+  harness.listener(message("hvac/sala/1/telemetria", { temperatura: 30 }, 2));
+  await settle();
+
+  assert.deepEqual(started, [{ salaId: "sala-1", temperatura: 20 }]);
+
+  releaseFirst();
+  await settle();
+  assert.deepEqual(started, [
+    { salaId: "sala-1", temperatura: 20 },
+    { salaId: "sala-1", temperatura: 30 },
+  ]);
 });

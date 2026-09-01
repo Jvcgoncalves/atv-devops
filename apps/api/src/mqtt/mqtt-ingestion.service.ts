@@ -11,6 +11,7 @@ import { OperationsService } from "../operations/operations.service.js";
 @Injectable()
 export class MqttIngestionService {
   private readonly logger = new Logger(MqttIngestionService.name);
+  private messageQueue = Promise.resolve();
 
   constructor(
     @Inject(MqttClientService) private readonly mqtt: MqttClientService,
@@ -22,7 +23,13 @@ export class MqttIngestionService {
   ) {}
 
   onModuleInit(): void {
-    this.mqtt.subscribe((message) => { void this.handle(message); });
+    this.mqtt.subscribe((message) => {
+      this.messageQueue = this.messageQueue
+        .then(() => this.handle(message))
+        .catch((error) => {
+          this.logger.error(`MQTT queue failure: ${error instanceof Error ? error.message : String(error)}`);
+        });
+    });
   }
 
   private async handle(message: MqttMessage): Promise<void> {
@@ -38,11 +45,14 @@ export class MqttIngestionService {
         defaultRoomId: process.env.MQTT_DEFAULT_ROOM_ID ?? "sala-1",
       });
       if (!telemetry) {
+        this.logger.warn(`[MQTT MAP] rejected topic=${message.topic} payload=${message.payload.toString("utf8")}`);
         this.operations?.recordTelemetryRejected();
         return;
       }
+      this.logger.log(`[MQTT MAP] ${JSON.stringify(telemetry)}`);
       const sourceMessageId = message.messageId == null ? undefined : `${message.topic}:${message.messageId}`;
-      await this.telemetry.ingest(telemetry, "MQTT", sourceMessageId);
+      const result = await this.telemetry.ingest(telemetry, "MQTT", sourceMessageId);
+      this.logger.log(`[MQTT INGEST] room=${telemetry.salaId} ok=${result?.ok ?? true} readingId=${result?.idLeitura ?? "-"} retain=${message.retain ?? false} dup=${message.dup ?? false}`);
     } catch (error) {
       this.logger.error(`MQTT message rejected: ${error instanceof Error ? error.message : String(error)}`);
     }

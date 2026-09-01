@@ -51,7 +51,15 @@ export class MqttClientService {
     });
     this.client.on("message", (topicName, payload, packet) => {
       this.operations?.recordMqttMessage();
-      for (const listener of this.listeners) listener({ topic: topicName, payload, messageId: packet.messageId });
+      this.logger.log(`[MQTT RX] topic=${topicName} qos=${packet.qos} retain=${packet.retain} dup=${packet.dup} messageId=${packet.messageId} payload=${payload.toString("utf8")}`);
+      for (const listener of this.listeners) listener({
+        topic: topicName,
+        payload,
+        messageId: packet.messageId,
+        qos: packet.qos,
+        retain: packet.retain,
+        dup: packet.dup,
+      });
     });
   }
 
@@ -67,10 +75,16 @@ export class MqttClientService {
   }
 
   async publish(topic: string, payload: Record<string, unknown>): Promise<boolean> {
-    if (!this.client || !this.connected) return false;
+    if (!this.client || !this.connected) {
+      this.logger.warn(`[MQTT TX] skipped; disconnected topic=${topic}`);
+      return false;
+    }
+    const serialized = JSON.stringify(payload);
+    this.logger.log(`[MQTT TX] topic=${topic} payload=${serialized}`);
     return new Promise((resolve) => {
-      this.client?.publish(topic, JSON.stringify(payload), { qos: 1 }, (error) => {
+      this.client?.publish(topic, serialized, { qos: 1 }, (error) => {
         if (error) this.logger.error(`MQTT publish failed: ${error.message}`);
+        else this.logger.log(`[MQTT TX OK] topic=${topic}`);
         resolve(!error);
       });
     });
