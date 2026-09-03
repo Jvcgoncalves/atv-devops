@@ -6,7 +6,10 @@
     "emitDecoratorMetadata": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "noEmit": true
+    "noEmit": false,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "rewriteRelativeImportExtensions": true
   },
   "include": ["src/**/*.ts"]
 }
