@@ -34,6 +34,8 @@
     "tsx": "^4.23.13"
   },
   "devDependencies": {
-    "@nestjs/testing": "^11.2.3"
+    "@nestjs/testing": "^11.2.3",
+    "@types/node": "^26.4.0",
+    "typescript": "^5.7.2"
   }
 }
