@@ -5,6 +5,8 @@
   "type": "module",
   "description": "API NestJS + Supabase do sistema HVAC",
   "scripts": {
+    "nest-build": "nest build",
+    "vercel-build": "npm run nest-build",
     "start": "node --import tsx src/main.ts",
     "dev": "node --watch --import tsx src/main.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -34,6 +36,7 @@
     "tsx": "^4.23.13"
   },
   "devDependencies": {
+    "@nestjs/cli": "^12.0.0",
     "@nestjs/testing": "^11.2.3",
     "@types/node": "^26.4.0",
     "typescript": "^5.7.2"
