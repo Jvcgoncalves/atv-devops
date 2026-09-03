@@ -27,7 +27,7 @@ Cores* do TCC (azul técnico `#0F4C81`, verde/âmbar/vermelho para status, contr
 
 ## Como rodar
 
-Requer Node.js 22.6+ e npm 10.x.
+Requer Node.js 24.x e npm 11.x.
 
 ```bash
 npm install
