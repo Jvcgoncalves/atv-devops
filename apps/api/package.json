@@ -8,7 +8,7 @@
     "start": "node --import tsx src/main.ts",
     "dev": "node --watch --import tsx src/main.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "build": "tsc -p tsconfig.json --noEmit",
+    "build": "npx tsc -p tsconfig.json --noEmit",
     "test": "npm run test:unit && npm run test:integration && npm run test:e2e && npm run test:mqtt && npm run test:websocket",
     "test:unit": "node --import tsx --test test/api-unit.test.ts test/cutover.test.ts test/operations.test.ts",
     "test:integration": "node --import tsx --test test/repository.test.ts",
