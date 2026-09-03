@@ -6,7 +6,7 @@ comandos MQTT e envia atualizações por Socket.IO.
 
 ## Requisitos
 
-- Node.js 22.6+ e npm 10.x.
+- Node.js 24.x e npm 11.x.
 
 ## Como rodar
 
